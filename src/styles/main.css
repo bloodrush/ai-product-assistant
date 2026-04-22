@@ -1,20 +1,22 @@
 /* ─── Design tokens ───────────────────────────────────────────────── */
 :root {
   --bg:           #0d0d0d;
-  --surface:      #161616;
-  --surface-2:    #1f1f1f;
-  --border:       #2a2a2a;
-  --border-light: #333;
+  --surface:      #1c1c1c;
+  --surface-2:    #252525;
+  --border:       #383838;
+  --border-light: #4a4a4a;
 
-  --text:         #e8e6e0;
-  --text-muted:   #6b6b6b;
-  --text-dim:     #3d3d3d;
+  --text:             #edeae3;
+  --text-secondary:   #c0bdb6;
+  --text-muted:       #a8a8a8;
+  --text-dim:         #808080;
+  --text-placeholder: #737373;
 
-  --accent:       #c8b560;
-  --accent-dim:   rgba(200, 181, 96, 0.12);
-  --accent-glow:  rgba(200, 181, 96, 0.06);
+  --accent:       #f58916;
+  --accent-dim:   rgba(245, 137, 22, 0.15);
+  --accent-glow:  rgba(245, 137, 22, 0.08);
 
-  --user-bg:      #1a1a1a;
+  --user-bg:      #222222;
   --ai-bg:        transparent;
 
   --radius:       4px;
@@ -141,7 +143,7 @@ body {
 }
 
 .phase-dot.future {
-  opacity: 0.35;
+  opacity: 0.6;
 }
 
 .phase-label {
@@ -158,7 +160,7 @@ body {
 }
 
 .phase-label.future {
-  opacity: 0.35;
+  opacity: 0.6;
 }
 
 .phase-connector {
@@ -205,9 +207,17 @@ body {
 }
 
 .empty-state-hint {
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 15px;
   line-height: 1.7;
+}
+
+.empty-state-tip {
+  margin-top: 16px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-style: italic;
+  line-height: 1.6;
 }
 
 /* ─── Messages ────────────────────────────────────────────────────── */
@@ -309,7 +319,7 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 12px 20px;
-  border-bottom: 1px solid rgba(200, 181, 96, 0.15);
+  border-bottom: 1px solid rgba(245, 137, 22, 0.15);
 }
 
 .output-card-badge {
@@ -428,11 +438,11 @@ body {
 }
 
 .chat-input:focus {
-  border-color: var(--border-light);
+  border-color: var(--accent);
 }
 
 .chat-input::placeholder {
-  color: var(--text-dim);
+  color: var(--text-placeholder);
 }
 
 .chat-input:disabled {
@@ -462,7 +472,9 @@ body {
 }
 
 .send-button:disabled {
-  opacity: 0.3;
+  background: transparent;
+  border: 1px solid var(--border-light);
+  color: var(--text-muted);
   cursor: default;
 }
 

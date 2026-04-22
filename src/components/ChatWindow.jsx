@@ -14,7 +14,10 @@ export default function ChatWindow({ messages, isLoading, error }) {
         <div className="empty-state">
           <p className="empty-state-label">Phase 1 — Understand the Problem</p>
           <p className="empty-state-hint">
-            Paste your context below — a Slack message, stakeholder email, rough brief, or a few bullet points. The AI takes it from there.
+            Paste your rough idea, Slack message, stakeholder email, or bullet points below. I'll take it from there — guiding you through structured problem discovery until we have a clear, well-defined problem statement.
+          </p>
+          <p className="empty-state-tip">
+            Tip: The more raw context you paste, the better I can reflect it back.
           </p>
         </div>
       )}
