@@ -1,35 +1,65 @@
-import PhaseIndicator from './components/PhaseIndicator.jsx'
+import { useState, useEffect } from 'react'
+import PhaseSidebar from './components/PhaseSidebar.jsx'
 import ChatWindow from './components/ChatWindow.jsx'
 import ChatInput from './components/ChatInput.jsx'
+import DocPanel from './components/DocPanel.jsx'
 import { useConversation } from './hooks/useConversation.js'
 import './styles/main.css'
 
+const PREFS_KEY = 'discovery-prefs'
+
+function loadPrefs() {
+  try { return { theme: 'dark', collapsed: false, showDocPanel: true, ...JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') } }
+  catch { return { theme: 'dark', collapsed: false, showDocPanel: true } }
+}
+
 export default function App() {
-  const { messages, isLoading, error, sendUserMessage } = useConversation()
+  const { messages, isLoading, error, docSections, sendUserMessage } = useConversation()
+  const [prefs, setPrefs] = useState(loadPrefs)
+
+  const updatePrefs = (patch) => {
+    setPrefs(prev => {
+      const next = { ...prev, ...patch }
+      localStorage.setItem(PREFS_KEY, JSON.stringify(next))
+      return next
+    })
+  }
+
+  // Apply theme to <html>
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', prefs.theme)
+  }, [prefs.theme])
 
   return (
-    <div className="app">
-      <header className="header">
-        <div className="header-inner">
-          <div className="logo">
-            <span className="logo-mark">◆</span>
-            <span className="logo-text">Discovery</span>
-          </div>
-          <PhaseIndicator currentPhase={1} />
-        </div>
-      </header>
+    <div className={`app-shell${prefs.collapsed ? ' sidebar-collapsed' : ''}${!prefs.showDocPanel ? ' no-doc' : ''}`}>
 
-      <main className="main">
-        <ChatWindow
-          messages={messages}
-          isLoading={isLoading}
-          error={error}
-        />
-      </main>
+      <PhaseSidebar
+        currentPhase={1}
+        collapsed={prefs.collapsed}
+        onToggleCollapse={() => updatePrefs({ collapsed: !prefs.collapsed })}
+        theme={prefs.theme}
+        onThemeChange={t => updatePrefs({ theme: t })}
+        showDocPanel={prefs.showDocPanel}
+        onToggleDocPanel={() => updatePrefs({ showDocPanel: !prefs.showDocPanel })}
+      />
 
-      <footer className="footer">
-        <ChatInput onSend={sendUserMessage} isLoading={isLoading} />
-      </footer>
+      <div className="chat-col">
+        <main className="main">
+          <ChatWindow
+            messages={messages}
+            isLoading={isLoading}
+            error={error}
+          />
+        </main>
+        <footer className="footer">
+          <ChatInput onSend={sendUserMessage} isLoading={isLoading} />
+        </footer>
+      </div>
+
+      {prefs.showDocPanel && (
+        <DocPanel sections={docSections} isLoading={isLoading} />
+      )}
+
     </div>
   )
 }

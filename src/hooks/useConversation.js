@@ -1,11 +1,27 @@
 import { useState, useCallback } from 'react'
 import { sendMessage } from '../lib/api.js'
 
+function parseDocSections(cardContent) {
+  const get = (label) => {
+    const r = new RegExp(`\\*\\*${label}\\*\\*\\n([\\s\\S]*?)(?=\\n\\*\\*|$)`)
+    const m = cardContent.match(r)
+    return m ? m[1].trim() : null
+  }
+  return {
+    problem:   get('Problem'),
+    affected:  get('Who is affected'),
+    mustHaves: get('Must-haves'),
+    noGoes:    get('No-goes'),
+    whatGood:  get('What good looks like'),
+  }
+}
+
 export function useConversation() {
-  const [messages, setMessages] = useState([]) // { role: 'user'|'assistant', content: string }
+  const [messages, setMessages] = useState([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
   const [phase1Complete, setPhase1Complete] = useState(false)
+  const [docSections, setDocSections] = useState({})
 
   const sendUserMessage = useCallback(async (userText) => {
     if (!userText.trim() || isLoading) return
@@ -23,9 +39,11 @@ export function useConversation() {
 
       setMessages(prev => [...prev, assistantMessage])
 
-      // Detect phase 1 completion
-      if (assistantText.includes('<output-card>')) {
+      // Detect phase 1 completion and parse doc sections
+      const cardMatch = assistantText.match(/<output-card>([\s\S]*?)<\/output-card>/)
+      if (cardMatch) {
         setPhase1Complete(true)
+        setDocSections(parseDocSections(cardMatch[1].trim()))
       }
     } catch (err) {
       setError(err.message)
@@ -39,6 +57,7 @@ export function useConversation() {
     isLoading,
     error,
     phase1Complete,
+    docSections,
     sendUserMessage,
   }
 }

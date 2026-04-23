@@ -1,7 +1,7 @@
 const PHASES = [
   { id: 1, label: 'Understand the Problem' },
   { id: 2, label: 'Validate the Problem' },
-  { id: 3, label: 'Define the Solution' },
+  { id: 3, label: 'Forge the Solution' },
   { id: 4, label: 'Write the Stories' },
   { id: 5, label: 'Launch Prep' },
 ]
