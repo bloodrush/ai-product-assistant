@@ -1,4 +1,4 @@
-import { SYSTEM_PROMPT } from './systemPrompt.js'
+import { getSystemPrompt } from './prompts/index.js'
 
 const API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY
 const API_URL = 'https://api.anthropic.com/v1/messages'
@@ -11,19 +11,14 @@ const MODELS = {
 }
 const MODEL = import.meta.env.VITE_APP_ENV === 'production' ? MODELS.prod : MODELS.dev
 
-// System prompt with cache_control — tells Anthropic to cache this block.
-// Cache writes cost 1.25x, cache reads cost 0.1x (10% of normal).
-// Since the system prompt is identical on every call, every call after
-// the first in a session reads from cache — ~90% saving on system prompt tokens.
-const CACHED_SYSTEM = [
-  {
-    type: 'text',
-    text: SYSTEM_PROMPT,
-    cache_control: { type: 'ephemeral' },
-  },
-]
-
-export async function sendMessage(conversationHistory) {
+export async function sendMessage(conversationHistory, phase = 1) {
+  const cachedSystem = [
+    {
+      type: 'text',
+      text: getSystemPrompt(phase),
+      cache_control: { type: 'ephemeral' },
+    },
+  ]
   if (!API_KEY) {
     throw new Error('VITE_ANTHROPIC_API_KEY is not set. Check your .env file.')
   }
@@ -40,7 +35,7 @@ export async function sendMessage(conversationHistory) {
     body: JSON.stringify({
       model: MODEL,
       max_tokens: 1024,
-      system: CACHED_SYSTEM,
+      system: cachedSystem,
       messages: conversationHistory,
     }),
   })

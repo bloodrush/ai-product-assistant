@@ -16,7 +16,7 @@ function parseDocSections(cardContent) {
   }
 }
 
-export function useConversation() {
+export function useConversation(phase = 1) {
   const [messages, setMessages] = useState([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -34,7 +34,7 @@ export function useConversation() {
     setError(null)
 
     try {
-      const assistantText = await sendMessage(updatedHistory)
+      const assistantText = await sendMessage(updatedHistory, phase)
       const assistantMessage = { role: 'assistant', content: assistantText }
 
       setMessages(prev => [...prev, assistantMessage])
@@ -50,7 +50,7 @@ export function useConversation() {
     } finally {
       setIsLoading(false)
     }
-  }, [messages, isLoading])
+  }, [messages, isLoading, phase])
 
   return {
     messages,

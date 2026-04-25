@@ -14,7 +14,8 @@ function loadPrefs() {
 }
 
 export default function App() {
-  const { messages, isLoading, error, docSections, sendUserMessage } = useConversation()
+  const [activePhase, setActivePhase] = useState(1)
+  const { messages, isLoading, error, docSections, sendUserMessage } = useConversation(activePhase)
   const [prefs, setPrefs] = useState(loadPrefs)
 
   const updatePrefs = (patch) => {
@@ -34,7 +35,7 @@ export default function App() {
     <div className={`app-shell${prefs.collapsed ? ' sidebar-collapsed' : ''}${!prefs.showDocPanel ? ' no-doc' : ''}`}>
 
       <PhaseSidebar
-        currentPhase={1}
+        currentPhase={activePhase}
         collapsed={prefs.collapsed}
         onToggleCollapse={() => updatePrefs({ collapsed: !prefs.collapsed })}
         theme={prefs.theme}
