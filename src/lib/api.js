@@ -7,7 +7,7 @@ const API_URL = 'https://api.anthropic.com/v1/messages'
 // Use HAIKU for development — ~5x cheaper, same API interface
 const MODELS = {
   dev:  'claude-haiku-4-5-20251001',
-  prod: 'claude-sonnet-4-20250514',
+  prod: 'claude-sonnet-4-6',
 }
 const MODEL = import.meta.env.VITE_APP_ENV === 'production' ? MODELS.prod : MODELS.dev
 
