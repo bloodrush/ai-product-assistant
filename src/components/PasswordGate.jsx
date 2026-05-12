@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { setPendingPassword } from '../lib/api.js'
 
 export default function PasswordGate({ onSuccess, error }) {
   const [password, setPassword] = useState('')
@@ -15,7 +14,7 @@ export default function PasswordGate({ onSuccess, error }) {
       return
     }
     setLocalError(null)
-    setPendingPassword(trimmed)
+    sessionStorage.setItem('sharedPassword', trimmed)
     onSuccess()
   }
 
