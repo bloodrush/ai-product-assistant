@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react'
-import { sendMessage } from '../lib/api.js'
+import { useState, useCallback, useEffect, useRef } from 'react'
+import { sendMessage, UNAUTHORIZED } from '../lib/api.js'
 
 function parseDocSections(cardContent) {
   const get = (label) => {
@@ -16,20 +16,28 @@ function parseDocSections(cardContent) {
   }
 }
 
-export function useConversation(phase = 1) {
+export function useConversation(phase = 1, { onUnauthorized } = {}) {
   const [messages, setMessages] = useState([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [phase1Complete, setPhase1Complete] = useState(false)
   const [docSections, setDocSections] = useState({})
+  const isLoadingRef = useRef(false)
+
+  useEffect(() => {
+    setMessages([])
+    setError(null)
+    setDocSections({})
+  }, [phase])
 
   const sendUserMessage = useCallback(async (userText) => {
-    if (!userText.trim() || isLoading) return
+    const trimmed = userText.trim()
+    if (!trimmed || isLoadingRef.current) return
 
-    const userMessage = { role: 'user', content: userText.trim() }
+    const userMessage = { role: 'user', content: trimmed }
     const updatedHistory = [...messages, userMessage]
 
     setMessages(updatedHistory)
+    isLoadingRef.current = true
     setIsLoading(true)
     setError(null)
 
@@ -39,24 +47,26 @@ export function useConversation(phase = 1) {
 
       setMessages(prev => [...prev, assistantMessage])
 
-      // Detect phase 1 completion and parse doc sections
       const cardMatch = assistantText.match(/<output-card>([\s\S]*?)<\/output-card>/)
       if (cardMatch) {
-        setPhase1Complete(true)
         setDocSections(parseDocSections(cardMatch[1].trim()))
       }
     } catch (err) {
-      setError(err.message)
+      if (err.message === UNAUTHORIZED) {
+        onUnauthorized?.()
+      } else {
+        setError(err.message)
+      }
     } finally {
+      isLoadingRef.current = false
       setIsLoading(false)
     }
-  }, [messages, isLoading, phase])
+  }, [messages, phase, onUnauthorized])
 
   return {
     messages,
     isLoading,
     error,
-    phase1Complete,
     docSections,
     sendUserMessage,
   }

@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import PhaseSidebar from './components/PhaseSidebar.jsx'
 import ChatWindow from './components/ChatWindow.jsx'
 import ChatInput from './components/ChatInput.jsx'
 import DocPanel from './components/DocPanel.jsx'
+import PasswordGate from './components/PasswordGate.jsx'
 import { useConversation } from './hooks/useConversation.js'
 import './styles/main.css'
 
@@ -15,7 +16,21 @@ function loadPrefs() {
 
 export default function App() {
   const [activePhase, setActivePhase] = useState(1)
-  const { messages, isLoading, error, docSections, sendUserMessage } = useConversation(activePhase)
+  const [authenticated, setAuthenticated] = useState(() => !!sessionStorage.getItem('sharedPassword'))
+  const [authError, setAuthError] = useState(null)
+
+  const handleUnauthorized = useCallback(() => {
+    sessionStorage.removeItem('sharedPassword')
+    setAuthError('Incorrect password. Try again.')
+    setAuthenticated(false)
+  }, [])
+
+  const handleAuthSuccess = useCallback(() => {
+    setAuthError(null)
+    setAuthenticated(true)
+  }, [])
+
+  const { messages, isLoading, error, docSections, sendUserMessage } = useConversation(activePhase, { onUnauthorized: handleUnauthorized })
   const [prefs, setPrefs] = useState(loadPrefs)
 
   const updatePrefs = (patch) => {
@@ -30,6 +45,10 @@ export default function App() {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', prefs.theme)
   }, [prefs.theme])
+
+  if (!authenticated) {
+    return <PasswordGate onSuccess={handleAuthSuccess} error={authError} />
+  }
 
   return (
     <div className={`app-shell${prefs.collapsed ? ' sidebar-collapsed' : ''}${!prefs.showDocPanel ? ' no-doc' : ''}`}>

@@ -865,3 +865,72 @@ body {
   border-color: var(--accent);
   color: var(--accent);
 }
+
+/* ─── Password gate ───────────────────────────────────────────────── */
+.password-gate {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+}
+
+.password-gate__form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 320px;
+}
+
+.password-gate__label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.password-gate__title {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.password-gate__input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  padding: 12px 16px;
+  outline: none;
+  transition: border-color var(--transition);
+}
+
+.password-gate__input:focus { border-color: var(--accent); }
+.password-gate__input::placeholder { color: var(--text-placeholder); }
+
+.password-gate__error {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: #e07070;
+}
+
+.password-gate__btn {
+  padding: 12px;
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius-lg);
+  color: #0d0d0d;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: opacity var(--transition);
+}
+
+.password-gate__btn:hover { opacity: 0.85; }

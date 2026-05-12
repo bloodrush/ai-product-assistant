@@ -84,14 +84,15 @@ Open `http://localhost:5173`.
 
 | Variable | Required | Description |
 |---|---|---|
-| `VITE_ANTHROPIC_API_KEY` | Yes | Your Anthropic API key |
-| `VITE_APP_ENV` | No | Set to `production` to use Sonnet. Omit or set to anything else to use Haiku. |
+| `ANTHROPIC_API_KEY` | Yes | Your Anthropic API key (server-side only) |
+| `SHARED_PASSWORD` | Yes | Password shown to users on first load |
+| `APP_ENV` | No | Set to `production` to use Sonnet. Omit for Haiku (dev). |
 
 ---
 
 ## Deployment
 
-The project is configured for [Vercel](https://vercel.com). Connect the GitHub repository, add `VITE_ANTHROPIC_API_KEY` and `VITE_APP_ENV=production` as environment variables, and deploy. `vercel.json` handles SPA routing.
+The project is configured for [Vercel](https://vercel.com). Connect the GitHub repository, add `ANTHROPIC_API_KEY`, `SHARED_PASSWORD`, and `APP_ENV=production` as environment variables, and deploy.
 
 ```bash
 npm run build   # Build for production

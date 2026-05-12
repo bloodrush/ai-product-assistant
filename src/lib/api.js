@@ -1,52 +1,42 @@
-import { getSystemPrompt } from './prompts/index.js'
+export const UNAUTHORIZED = 'UNAUTHORIZED'
 
-const API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY
-const API_URL = 'https://api.anthropic.com/v1/messages'
+// Holds the password before the server has confirmed it's valid.
+// Written to sessionStorage only on first successful response.
+let _pendingPassword = null
 
-// Switch to SONNET for production / real user testing
-// Use HAIKU for development — ~5x cheaper, same API interface
-const MODELS = {
-  dev:  'claude-haiku-4-5-20251001',
-  prod: 'claude-sonnet-4-6',
+export function setPendingPassword(password) {
+  _pendingPassword = password
 }
-const MODEL = import.meta.env.VITE_APP_ENV === 'production' ? MODELS.prod : MODELS.dev
 
 export async function sendMessage(conversationHistory, phase = 1) {
-  const cachedSystem = [
-    {
-      type: 'text',
-      text: getSystemPrompt(phase),
-      cache_control: { type: 'ephemeral' },
-    },
-  ]
-  if (!API_KEY) {
-    throw new Error('VITE_ANTHROPIC_API_KEY is not set. Check your .env file.')
-  }
+  const password = _pendingPassword ?? sessionStorage.getItem('sharedPassword')
+  if (!password) throw new Error(UNAUTHORIZED)
 
-  const response = await fetch(API_URL, {
+  const response = await fetch('/api/chat', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': API_KEY,
-      'anthropic-version': '2023-06-01',
-      'anthropic-beta': 'prompt-caching-2024-07-31',
-      'anthropic-dangerous-direct-browser-access': 'true',
+      'x-shared-password': password,
     },
-    body: JSON.stringify({
-      model: MODEL,
-      max_tokens: 1024,
-      system: cachedSystem,
-      messages: conversationHistory,
-    }),
+    body: JSON.stringify({ conversationHistory, phase }),
   })
+
+  if (response.status === 401) {
+    _pendingPassword = null
+    throw new Error(UNAUTHORIZED)
+  }
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}))
-    throw new Error(error?.error?.message || `API error: ${response.status}`)
+    throw new Error(error?.error || `API error: ${response.status}`)
+  }
+
+  if (_pendingPassword) {
+    sessionStorage.setItem('sharedPassword', _pendingPassword)
+    _pendingPassword = null
   }
 
   const data = await response.json()
-  return data.content[0].text
+  if (!data?.text) throw new Error('Malformed response from server')
+  return data.text
 }
-
-export { MODEL, MODELS }
