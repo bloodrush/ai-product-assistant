@@ -6,7 +6,7 @@ const PHASES = [
   { id: 5, label: 'Launch Prep',            color: '#3dbab3', desc: 'Get to ship-ready' },
 ]
 
-export default function PhaseSidebar({ currentPhase = 1, collapsed, onToggleCollapse, theme, onThemeChange, showDocPanel, onToggleDocPanel }) {
+export default function PhaseSidebar({ currentPhase = 1, collapsed, onToggleCollapse, theme, onThemeChange, showDocPanel, onToggleDocPanel, onStartNew }) {
   return (
     <div className={`phase-sidebar${collapsed ? ' collapsed' : ''}`}>
 
@@ -89,6 +89,11 @@ export default function PhaseSidebar({ currentPhase = 1, collapsed, onToggleColl
               onClick={onToggleDocPanel}
             />
           </div>
+          {onStartNew && (
+            <button className="start-new-btn" onClick={onStartNew}>
+              Start new discovery
+            </button>
+          )}
         </div>
       )}
 

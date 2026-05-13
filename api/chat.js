@@ -56,7 +56,7 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({}))
-      return res.status(response.status).json({ error: error?.error?.message || `API error: ${response.status}` })
+      return res.status(502).json({ error: error?.error?.message || `API error: ${response.status}` })
     }
 
     const data = await response.json()

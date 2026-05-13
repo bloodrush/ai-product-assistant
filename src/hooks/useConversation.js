@@ -16,14 +16,17 @@ function parseDocSections(cardContent) {
   }
 }
 
-export function useConversation(phase = 1, { onUnauthorized } = {}) {
-  const [messages, setMessages] = useState([])
+export function useConversation(phase = 1, { onUnauthorized, initialMessages = [], initialDocSections = {} } = {}) {
+  const [messages, setMessages] = useState(initialMessages)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [docSections, setDocSections] = useState({})
+  const [docSections, setDocSections] = useState(initialDocSections)
   const isLoadingRef = useRef(false)
+  const prevPhaseRef = useRef(phase)
 
   useEffect(() => {
+    if (prevPhaseRef.current === phase) return
+    prevPhaseRef.current = phase
     setMessages([])
     setError(null)
     setDocSections({})
@@ -63,11 +66,18 @@ export function useConversation(phase = 1, { onUnauthorized } = {}) {
     }
   }, [messages, phase, onUnauthorized])
 
+  const reset = useCallback(() => {
+    setMessages([])
+    setError(null)
+    setDocSections({})
+  }, [])
+
   return {
     messages,
     isLoading,
     error,
     docSections,
     sendUserMessage,
+    reset,
   }
 }
