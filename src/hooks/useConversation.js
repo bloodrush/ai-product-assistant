@@ -71,6 +71,16 @@ export function useConversation(phase = 1, { onUnauthorized, initialMessages = [
     }
   }, [messages, phase, onUnauthorized])
 
+  const injectPhaseOutput = useCallback((text) => {
+    const assistantMessage = { role: 'assistant', content: text }
+    setMessages(prev => [...prev, assistantMessage])
+    const cardMatch = text.match(/<output-card>([\s\S]*?)<\/output-card>/)
+    if (cardMatch) {
+      setDocSections(parseDocSections(cardMatch[1].trim()))
+    }
+    setPhaseOutputReceived(true)
+  }, [])
+
   const reset = useCallback(() => {
     setMessages([])
     setError(null)
@@ -84,6 +94,7 @@ export function useConversation(phase = 1, { onUnauthorized, initialMessages = [
     docSections,
     phaseOutputReceived,
     sendUserMessage,
+    injectPhaseOutput,
     reset,
   }
 }

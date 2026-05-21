@@ -25,7 +25,7 @@ const PHASE_EMPTY = {
   },
 }
 
-export default function ChatWindow({ messages, isLoading, error, phase = 1, showAdvanceButton, onAdvancePhase }) {
+export default function ChatWindow({ messages, isLoading, error, phase = 1, showAdvanceButton, onAdvancePhase, onInjectSampleOutput }) {
   const bottomRef = useRef(null)
   const empty = PHASE_EMPTY[phase] ?? PHASE_EMPTY[1]
 
@@ -60,6 +60,14 @@ export default function ChatWindow({ messages, isLoading, error, phase = 1, show
       {error && (
         <div className="error-message">
           {error}
+        </div>
+      )}
+
+      {onInjectSampleOutput && !isLoading && (
+        <div className="phase-advance-cta">
+          <button className="dev-inject-btn" onClick={onInjectSampleOutput}>
+            ⚡ Inject sample output
+          </button>
         </div>
       )}
 

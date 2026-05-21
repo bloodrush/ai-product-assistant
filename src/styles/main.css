@@ -562,6 +562,20 @@ body {
 
 .phase-advance-btn:hover { opacity: 0.85; }
 
+.dev-inject-btn {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 8px 18px;
+  font-size: 0.8rem;
+  font-family: var(--font-mono, monospace);
+  cursor: pointer;
+  transition: opacity var(--transition);
+  opacity: 0.6;
+}
+.dev-inject-btn:hover { opacity: 1; }
+
 /* ─── Output card ─────────────────────────────────────────────────── */
 .output-card-wrapper {
   display: flex;

@@ -6,19 +6,25 @@ import DocPanel from './components/DocPanel.jsx'
 import PasswordGate from './components/PasswordGate.jsx'
 import { useConversation } from './hooks/useConversation.js'
 import { loadDiscovery, saveDiscovery, clearDiscovery } from './lib/persistence.js'
+import { SAMPLE_OUTPUTS } from './lib/sampleOutputs.js'
 import './styles/main.css'
+
+const isDev = import.meta.env.DEV
 
 const PREFS_KEY = 'discovery-prefs'
 
-function formatCarryIn(output) {
-  return [
-    'Here is the Phase 1 output:',
-    output.problem    && `**Problem**\n${output.problem}`,
-    output.affected   && `**Who is affected**\n${output.affected}`,
-    output.mustHaves  && `**Must-haves**\n${output.mustHaves}`,
-    output.noGoes     && `**No-goes**\n${output.noGoes}`,
-    output.whatGood   && `**What good looks like**\n${output.whatGood}`,
-  ].filter(Boolean).join('\n\n')
+function formatCarryIn(phase, output) {
+  if (phase === 1 && !output.rawText) {
+    return [
+      'Here is the Phase 1 output:',
+      output.problem    && `**Problem**\n${output.problem}`,
+      output.affected   && `**Who is affected**\n${output.affected}`,
+      output.mustHaves  && `**Must-haves**\n${output.mustHaves}`,
+      output.noGoes     && `**No-goes**\n${output.noGoes}`,
+      output.whatGood   && `**What good looks like**\n${output.whatGood}`,
+    ].filter(Boolean).join('\n\n')
+  }
+  return `Here is the Phase ${phase} output:\n\n${output.rawText}`
 }
 
 function loadPrefs() {
@@ -52,7 +58,7 @@ export default function App() {
     setAuthenticated(true)
   }, [])
 
-  const { messages, isLoading, error, docSections, phaseOutputReceived, sendUserMessage, reset } = useConversation(activePhase, {
+  const { messages, isLoading, error, docSections, phaseOutputReceived, sendUserMessage, injectPhaseOutput, reset } = useConversation(activePhase, {
     onUnauthorized: handleUnauthorized,
     initialMessages: savedDiscovery?.conversation ?? [],
     initialDocSections: savedDiscovery?.phaseOutputs?.[savedDiscovery?.currentPhase] ?? {},
@@ -82,10 +88,18 @@ export default function App() {
   const handleAdvancePhase = useCallback(() => {
     const output = phaseOutputsRef.current[activePhase]
     if (output && Object.keys(output).some(k => output[k])) {
-      pendingCarryInRef.current = formatCarryIn(output)
+      pendingCarryInRef.current = formatCarryIn(activePhase, output)
     }
     setActivePhase(prev => prev + 1)
   }, [activePhase])
+
+  const handleInjectSampleOutput = useCallback(() => {
+    const sample = SAMPLE_OUTPUTS[activePhase]
+    injectPhaseOutput(sample)
+    if (activePhase > 1) {
+      phaseOutputsRef.current = { ...phaseOutputsRef.current, [activePhase]: { rawText: sample } }
+    }
+  }, [activePhase, injectPhaseOutput])
 
   useEffect(() => {
     if (pendingCarryInRef.current === null) return
@@ -152,6 +166,7 @@ export default function App() {
             phase={activePhase}
             showAdvanceButton={phaseOutputReceived && activePhase < 5}
             onAdvancePhase={handleAdvancePhase}
+            onInjectSampleOutput={isDev && !phaseOutputReceived ? handleInjectSampleOutput : undefined}
           />
         </main>
         <footer className="footer">
