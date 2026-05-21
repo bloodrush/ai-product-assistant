@@ -10,6 +10,17 @@ import './styles/main.css'
 
 const PREFS_KEY = 'discovery-prefs'
 
+function formatCarryIn(output) {
+  return [
+    'Here is the Phase 1 output:',
+    output.problem    && `**Problem**\n${output.problem}`,
+    output.affected   && `**Who is affected**\n${output.affected}`,
+    output.mustHaves  && `**Must-haves**\n${output.mustHaves}`,
+    output.noGoes     && `**No-goes**\n${output.noGoes}`,
+    output.whatGood   && `**What good looks like**\n${output.whatGood}`,
+  ].filter(Boolean).join('\n\n')
+}
+
 function loadPrefs() {
   try { return { theme: 'dark', collapsed: false, showDocPanel: true, ...JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') } }
   catch { return { theme: 'dark', collapsed: false, showDocPanel: true } }
@@ -25,6 +36,8 @@ export default function App() {
   const createdAtRef = useRef(savedDiscovery?.createdAt ?? null)
   const phaseOutputsRef = useRef(savedDiscovery?.phaseOutputs ?? {})
 
+  const pendingCarryInRef = useRef(null)
+
   const [authenticated, setAuthenticated] = useState(() => !!sessionStorage.getItem('sharedPassword'))
   const [authError, setAuthError] = useState(null)
 
@@ -39,7 +52,7 @@ export default function App() {
     setAuthenticated(true)
   }, [])
 
-  const { messages, isLoading, error, docSections, sendUserMessage, reset } = useConversation(activePhase, {
+  const { messages, isLoading, error, docSections, phaseOutputReceived, sendUserMessage, reset } = useConversation(activePhase, {
     onUnauthorized: handleUnauthorized,
     initialMessages: savedDiscovery?.conversation ?? [],
     initialDocSections: savedDiscovery?.phaseOutputs?.[savedDiscovery?.currentPhase] ?? {},
@@ -65,6 +78,22 @@ export default function App() {
       phaseOutputs: phaseOutputsRef.current,
     })
   }, [messages, isLoading, docSections, activePhase])
+
+  const handleAdvancePhase = useCallback(() => {
+    const output = phaseOutputsRef.current[activePhase]
+    if (output && Object.keys(output).some(k => output[k])) {
+      pendingCarryInRef.current = formatCarryIn(output)
+    }
+    setActivePhase(prev => prev + 1)
+  }, [activePhase])
+
+  useEffect(() => {
+    if (pendingCarryInRef.current === null) return
+    if (messages.length !== 0 || isLoading) return
+    const msg = pendingCarryInRef.current
+    pendingCarryInRef.current = null
+    sendUserMessage(msg)
+  }, [messages, isLoading, sendUserMessage])
 
   const handleStartNew = useCallback(() => {
     if (!window.confirm('This will clear your current discovery. Continue?')) return
@@ -120,10 +149,13 @@ export default function App() {
             messages={messages}
             isLoading={isLoading}
             error={error}
+            phase={activePhase}
+            showAdvanceButton={phaseOutputReceived && activePhase < 5}
+            onAdvancePhase={handleAdvancePhase}
           />
         </main>
         <footer className="footer">
-          <ChatInput onSend={sendUserMessage} isLoading={isLoading} />
+          <ChatInput onSend={sendUserMessage} isLoading={isLoading} phaseComplete={phaseOutputReceived && activePhase < 5} />
         </footer>
       </div>
 

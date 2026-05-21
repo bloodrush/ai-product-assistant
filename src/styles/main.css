@@ -534,6 +534,34 @@ body {
   font-size: 13px;
 }
 
+/* ─── Gated input (phase complete) ───────────────────────────────── */
+.chat-input.phase-done {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ─── Phase advance CTA ───────────────────────────────────────────── */
+.phase-advance-cta {
+  display: flex;
+  justify-content: center;
+  padding: 20px 0 8px;
+}
+
+.phase-advance-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  padding: 10px 22px;
+  font-size: 0.875rem;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity var(--transition);
+}
+
+.phase-advance-btn:hover { opacity: 0.85; }
+
 /* ─── Output card ─────────────────────────────────────────────────── */
 .output-card-wrapper {
   display: flex;

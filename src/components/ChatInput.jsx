@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 
-export default function ChatInput({ onSend, isLoading }) {
+export default function ChatInput({ onSend, isLoading, phaseComplete }) {
   const [value, setValue] = useState('')
   const textareaRef = useRef(null)
+  const isDisabled = isLoading || phaseComplete
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -12,7 +13,7 @@ export default function ChatInput({ onSend, isLoading }) {
   }, [value])
 
   const handleSend = () => {
-    if (!value.trim() || isLoading) return
+    if (!value.trim() || isDisabled) return
     onSend(value)
     setValue('')
   }
@@ -29,23 +30,25 @@ export default function ChatInput({ onSend, isLoading }) {
       <div className="chat-input-wrapper">
         <textarea
           ref={textareaRef}
-          className="chat-input"
+          className={`chat-input${phaseComplete ? ' phase-done' : ''}`}
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(e) => { if (!phaseComplete) setValue(e.target.value) }}
           onKeyDown={handleKeyDown}
-          placeholder="Paste your context or respond here… (Enter to send, Shift+Enter for new line)"
+          placeholder={phaseComplete
+            ? 'Click "Continue to Phase …" above to proceed'
+            : 'Paste your context or respond here… (Enter to send, Shift+Enter for new line)'}
           rows={1}
-          disabled={isLoading}
+          disabled={isDisabled}
         />
         <button
           className="send-button"
           onClick={handleSend}
-          disabled={!value.trim() || isLoading}
+          disabled={!value.trim() || isDisabled}
         >
           Send
         </button>
       </div>
-      <p className="input-hint">Enter to send · Shift+Enter for new line</p>
+      {!phaseComplete && <p className="input-hint">Enter to send · Shift+Enter for new line</p>}
     </div>
   )
 }

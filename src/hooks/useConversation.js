@@ -21,6 +21,9 @@ export function useConversation(phase = 1, { onUnauthorized, initialMessages = [
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
   const [docSections, setDocSections] = useState(initialDocSections)
+  const [phaseOutputReceived, setPhaseOutputReceived] = useState(
+    () => initialMessages.some(m => m.role === 'assistant' && m.content?.includes('<output-card>'))
+  )
   const isLoadingRef = useRef(false)
   const prevPhaseRef = useRef(phase)
 
@@ -30,6 +33,7 @@ export function useConversation(phase = 1, { onUnauthorized, initialMessages = [
     setMessages([])
     setError(null)
     setDocSections({})
+    setPhaseOutputReceived(false)
   }, [phase])
 
   const sendUserMessage = useCallback(async (userText) => {
@@ -53,6 +57,7 @@ export function useConversation(phase = 1, { onUnauthorized, initialMessages = [
       const cardMatch = assistantText.match(/<output-card>([\s\S]*?)<\/output-card>/)
       if (cardMatch) {
         setDocSections(parseDocSections(cardMatch[1].trim()))
+        setPhaseOutputReceived(true)
       }
     } catch (err) {
       if (err.message === UNAUTHORIZED) {
@@ -77,6 +82,7 @@ export function useConversation(phase = 1, { onUnauthorized, initialMessages = [
     isLoading,
     error,
     docSections,
+    phaseOutputReceived,
     sendUserMessage,
     reset,
   }
