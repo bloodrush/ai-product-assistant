@@ -16,6 +16,7 @@ export default function ChatInput({ onSend, isLoading, phaseComplete }) {
     if (!value.trim() || isDisabled) return
     onSend(value)
     setValue('')
+    textareaRef.current?.focus()
   }
 
   const handleKeyDown = (e) => {
