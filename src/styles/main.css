@@ -114,14 +114,6 @@ body {
   grid-template-columns: 52px 1fr 280px;
 }
 
-.app-shell.no-doc {
-  grid-template-columns: 220px 1fr;
-}
-
-.app-shell.sidebar-collapsed.no-doc {
-  grid-template-columns: 52px 1fr;
-}
-
 /* ─── Sidebar ─────────────────────────────────────────────────────── */
 .phase-sidebar {
   background: var(--sidebar-bg);
@@ -173,108 +165,6 @@ body {
   line-height: 1;
 }
 
-/* ─── Collapsed phase nodes ───────────────────────────────────────── */
-.sidebar-collapsed-phases {
-  padding: 16px 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 18px;
-}
-
-.collapsed-node {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  border: 1.5px solid var(--border);
-  color: var(--text-muted);
-  background: var(--sidebar-bg);
-  transition: all 0.2s;
-}
-
-/* ─── Expanded phase list ─────────────────────────────────────────── */
-.phase-list {
-  padding: 20px 16px;
-  flex: 1;
-  overflow-y: auto;
-  scrollbar-width: none;
-}
-
-.phase-list::-webkit-scrollbar { display: none; }
-
-.phase-track {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-}
-
-.phase-track::before {
-  content: '';
-  position: absolute;
-  left: 13px;
-  top: 28px;
-  bottom: 28px;
-  width: 1px;
-  background: var(--border);
-}
-
-.phase-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 6px 0;
-  position: relative;
-  z-index: 1;
-}
-
-.phase-node {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 500;
-  border: 1.5px solid var(--border);
-  color: var(--text-muted);
-  background: var(--sidebar-bg);
-  transition: all 0.2s;
-}
-
-.phase-meta {
-  flex: 1;
-  padding: 5px 0;
-  min-width: 0;
-}
-
-.phase-name {
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--text-muted);
-  line-height: 1.3;
-  transition: color 0.2s;
-}
-
-.phase-item.active .phase-name { color: var(--text); }
-
-.phase-desc {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-top: 2px;
-  line-height: 1.4;
-  opacity: 0.7;
-}
-
-.phase-item.active .phase-desc { opacity: 1; }
-
 /* ─── Sidebar settings (theme / toggles) ─────────────────────────── */
 .sidebar-spacer { flex: 1; }
 
@@ -322,45 +212,6 @@ body {
   color: var(--text);
   border-color: var(--border-light);
 }
-
-.settings-toggle-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.settings-toggle-row span {
-  font-size: 11px;
-  color: var(--text-secondary);
-}
-
-.tog {
-  width: 30px;
-  height: 17px;
-  border-radius: 9px;
-  background: var(--border);
-  border: none;
-  cursor: pointer;
-  position: relative;
-  transition: background 0.2s;
-  flex-shrink: 0;
-}
-
-.tog.on { background: var(--accent); }
-
-.tog::after {
-  content: '';
-  position: absolute;
-  top: 2.5px;
-  left: 2.5px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: white;
-  transition: transform 0.2s;
-}
-
-.tog.on::after { transform: translateX(13px); }
 
 /* ─── Collapse toggle ─────────────────────────────────────────────── */
 .sidebar-collapse-btn {
@@ -773,17 +624,6 @@ body {
   color: var(--accent);
 }
 
-.doc-panel-badge {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  border: 1px solid var(--border);
-  padding: 2px 8px;
-  border-radius: 3px;
-}
-
 .doc-panel-body {
   flex: 1;
   overflow-y: auto;
@@ -804,8 +644,8 @@ body {
 }
 
 .doc-section.filled {
-  background: var(--accent-dim);
-  border-color: var(--accent-border);
+  background: color-mix(in srgb, var(--bubble-color, var(--accent)) 15%, transparent);
+  border-color: color-mix(in srgb, var(--bubble-color, var(--accent)) 25%, transparent);
 }
 
 .doc-section.current {
@@ -824,7 +664,7 @@ body {
   margin-bottom: 5px;
 }
 
-.doc-section.filled .doc-sec-label  { color: var(--accent); }
+.doc-section.filled .doc-sec-label  { color: var(--bubble-color, var(--accent)); }
 .doc-section.current .doc-sec-label { color: var(--text-secondary); }
 .doc-section.pending .doc-sec-label { color: var(--text-muted); opacity: 0.45; }
 
@@ -880,14 +720,6 @@ body {
   flex-shrink: 0;
 }
 
-.doc-panel-actions {
-  padding: 0 16px 14px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
 .doc-action-btn {
   width: 100%;
   padding: 8px;
@@ -906,6 +738,141 @@ body {
 .doc-action-btn:hover {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+/* ─── Phase accordion (outcome panel) ────────────────────────────── */
+.phase-accordion {
+  border-left: 2px solid transparent;
+  border-radius: 0 6px 6px 0;
+  margin-bottom: 2px;
+  transition: border-color 0.2s;
+}
+
+.phase-accordion.active {
+  background: var(--surface);
+}
+
+.phase-accordion.done {
+  opacity: 0.85;
+}
+
+.phase-accordion.past {
+  opacity: 0.6;
+}
+
+.phase-accordion.future {
+  opacity: 0.4;
+}
+
+.phase-acc-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  user-select: none;
+}
+
+.phase-acc-header.clickable {
+  cursor: pointer;
+}
+
+.phase-acc-header.clickable:hover {
+  background: var(--surface);
+  border-radius: 0 6px 6px 0;
+}
+
+.phase-acc-indicator {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.phase-acc-check {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.phase-acc-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.phase-acc-num {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.phase-acc-label {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.phase-acc-num-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.phase-accordion.active .phase-acc-num-label {
+  color: inherit;
+}
+
+.phase-acc-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.phase-accordion.active .phase-acc-name {
+  color: var(--text);
+}
+
+.phase-acc-chevron {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+
+.phase-acc-chevron.open {
+  transform: rotate(180deg);
+}
+
+.phase-acc-body {
+  padding: 0 12px 12px;
+}
+
+.acc-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.acc-empty {
+  font-size: 11px;
+  font-style: italic;
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.acc-actions {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 /* ─── Password gate ───────────────────────────────────────────────── */

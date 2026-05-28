@@ -56,7 +56,10 @@ export function useConversation(phase = 1, { onUnauthorized, initialMessages = [
 
       const cardMatch = assistantText.match(/<output-card>([\s\S]*?)<\/output-card>/)
       if (cardMatch) {
-        setDocSections(parseDocSections(cardMatch[1].trim()))
+        setDocSections(phase === 1
+          ? parseDocSections(cardMatch[1].trim())
+          : { rawText: cardMatch[1].trim() }
+        )
         setPhaseOutputReceived(true)
       }
     } catch (err) {
@@ -76,10 +79,13 @@ export function useConversation(phase = 1, { onUnauthorized, initialMessages = [
     setMessages(prev => [...prev, assistantMessage])
     const cardMatch = text.match(/<output-card>([\s\S]*?)<\/output-card>/)
     if (cardMatch) {
-      setDocSections(parseDocSections(cardMatch[1].trim()))
+      setDocSections(phase === 1
+        ? parseDocSections(cardMatch[1].trim())
+        : { rawText: cardMatch[1].trim() }
+      )
     }
     setPhaseOutputReceived(true)
-  }, [])
+  }, [phase])
 
   const reset = useCallback(() => {
     setMessages([])

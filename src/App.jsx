@@ -28,8 +28,8 @@ function formatCarryIn(phase, output) {
 }
 
 function loadPrefs() {
-  try { return { theme: 'dark', collapsed: false, showDocPanel: true, ...JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') } }
-  catch { return { theme: 'dark', collapsed: false, showDocPanel: true } }
+  try { return { theme: 'dark', collapsed: false, ...JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') } }
+  catch { return { theme: 'dark', collapsed: false } }
 }
 
 function formatRestoreDate(iso) {
@@ -41,6 +41,7 @@ export default function App() {
   const [activePhase, setActivePhase] = useState(savedDiscovery?.currentPhase ?? 1)
   const createdAtRef = useRef(savedDiscovery?.createdAt ?? null)
   const phaseOutputsRef = useRef(savedDiscovery?.phaseOutputs ?? {})
+  const [phaseOutputs, setPhaseOutputs] = useState(savedDiscovery?.phaseOutputs ?? {})
 
   const pendingCarryInRef = useRef(null)
 
@@ -73,7 +74,9 @@ export default function App() {
     if (messages.length === 0) return
     if (!createdAtRef.current) createdAtRef.current = new Date().toISOString()
     if (Object.keys(docSections).length > 0) {
-      phaseOutputsRef.current = { ...phaseOutputsRef.current, [activePhase]: docSections }
+      const updated = { ...phaseOutputsRef.current, [activePhase]: docSections }
+      phaseOutputsRef.current = updated
+      setPhaseOutputs(updated)
     }
     saveDiscovery({
       version: 1,
@@ -97,7 +100,9 @@ export default function App() {
     const sample = SAMPLE_OUTPUTS[activePhase]
     injectPhaseOutput(sample)
     if (activePhase > 1) {
-      phaseOutputsRef.current = { ...phaseOutputsRef.current, [activePhase]: { rawText: sample } }
+      const updated = { ...phaseOutputsRef.current, [activePhase]: { rawText: sample } }
+      phaseOutputsRef.current = updated
+      setPhaseOutputs(updated)
     }
   }, [activePhase, injectPhaseOutput])
 
@@ -114,6 +119,7 @@ export default function App() {
     clearDiscovery()
     createdAtRef.current = null
     phaseOutputsRef.current = {}
+    setPhaseOutputs({})
     reset()
     setActivePhase(1)
     setShowRestoreIndicator(false)
@@ -139,16 +145,13 @@ export default function App() {
   }
 
   return (
-    <div className={`app-shell${prefs.collapsed ? ' sidebar-collapsed' : ''}${!prefs.showDocPanel ? ' no-doc' : ''}`}>
+    <div className={`app-shell${prefs.collapsed ? ' sidebar-collapsed' : ''}`}>
 
       <PhaseSidebar
-        currentPhase={activePhase}
         collapsed={prefs.collapsed}
         onToggleCollapse={() => updatePrefs({ collapsed: !prefs.collapsed })}
         theme={prefs.theme}
         onThemeChange={t => updatePrefs({ theme: t })}
-        showDocPanel={prefs.showDocPanel}
-        onToggleDocPanel={() => updatePrefs({ showDocPanel: !prefs.showDocPanel })}
         onStartNew={handleStartNew}
       />
 
@@ -174,9 +177,12 @@ export default function App() {
         </footer>
       </div>
 
-      {prefs.showDocPanel && (
-        <DocPanel sections={docSections} isLoading={isLoading} />
-      )}
+      <DocPanel
+        sections={docSections}
+        isLoading={isLoading}
+        currentPhase={activePhase}
+        phaseOutputs={phaseOutputs}
+      />
 
     </div>
   )
