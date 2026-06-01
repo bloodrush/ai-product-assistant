@@ -6,9 +6,17 @@ function parseOutputCard(content) {
   return match[1].trim()
 }
 
-function renderMarkdown(text) {
-  // Simple markdown: bold, bullets
+function escapeHtml(text) {
   return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+function renderMarkdown(text) {
+  return escapeHtml(text)
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/^- (.+)$/gm, '<li>$1</li>')
     .replace(/(<li>.*<\/li>)/gs, (match) => `<ul>${match}</ul>`)
