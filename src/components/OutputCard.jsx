@@ -22,7 +22,7 @@ function renderMarkdown(text) {
     .replace(/(<li>.*<\/li>)/gs, (match) => `<ul>${match}</ul>`)
 }
 
-export default function OutputCard({ content }) {
+export default function OutputCard({ content, phase = 1 }) {
   const [copied, setCopied] = useState(false)
   const cardContent = parseOutputCard(content)
 
@@ -46,7 +46,7 @@ export default function OutputCard({ content }) {
     <div className="output-card-wrapper">
       <div className="output-card">
         <div className="output-card-header">
-          <div className="output-card-badge">Phase 1 Output</div>
+          <div className="output-card-badge">Phase {phase} Output</div>
           <button
             className={`copy-button ${copied ? 'copied' : ''}`}
             onClick={handleCopy}

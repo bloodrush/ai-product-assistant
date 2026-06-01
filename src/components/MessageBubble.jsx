@@ -1,8 +1,8 @@
 import OutputCard, { parseOutputCard } from './OutputCard.jsx'
 
-export default function MessageBubble({ role, content }) {
+export default function MessageBubble({ role, content, phase }) {
   if (role === 'assistant' && parseOutputCard(content)) {
-    return <OutputCard content={content} />
+    return <OutputCard content={content} phase={phase} />
   }
 
   return (
