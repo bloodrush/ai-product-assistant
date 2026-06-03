@@ -5,7 +5,15 @@ import ChatInput from './components/ChatInput.jsx'
 import DocPanel from './components/DocPanel.jsx'
 import PasswordGate from './components/PasswordGate.jsx'
 import { useConversation } from './hooks/useConversation.js'
-import { loadDiscovery, saveDiscovery, clearDiscovery } from './lib/persistence.js'
+import {
+  migrateLegacyDiscovery,
+  getAllDiscoveries,
+  createDiscovery,
+  setActiveDiscovery,
+  loadActiveDiscovery,
+  saveDiscovery,
+  deriveDiscoveryName,
+} from './lib/persistence.js'
 import { SAMPLE_OUTPUTS } from './lib/sampleOutputs.js'
 import './styles/main.css'
 
@@ -32,16 +40,18 @@ function loadPrefs() {
   catch { return { theme: 'dark', collapsed: false } }
 }
 
-function formatRestoreDate(iso) {
-  return new Date(iso).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
-}
-
 export default function App() {
-  const [savedDiscovery] = useState(() => loadDiscovery())
-  const [activePhase, setActivePhase] = useState(savedDiscovery?.currentPhase ?? 1)
-  const createdAtRef = useRef(savedDiscovery?.createdAt ?? null)
-  const phaseOutputsRef = useRef(savedDiscovery?.phaseOutputs ?? {})
-  const [phaseOutputs, setPhaseOutputs] = useState(savedDiscovery?.phaseOutputs ?? {})
+  const [initialLoad] = useState(() => {
+    migrateLegacyDiscovery()
+    return loadActiveDiscovery() ?? { item: createDiscovery(), conversation: [] }
+  })
+
+  const [activePhase, setActivePhase] = useState(initialLoad.item.currentPhase)
+  const [activeDiscoveryId, setActiveDiscoveryId] = useState(initialLoad.item.id)
+  const [discoveries, setDiscoveries] = useState(() => getAllDiscoveries())
+  const createdAtRef = useRef(initialLoad.item.createdAt)
+  const phaseOutputsRef = useRef(initialLoad.item.phaseOutputs)
+  const [phaseOutputs, setPhaseOutputs] = useState(initialLoad.item.phaseOutputs)
 
   const pendingCarryInRef = useRef(null)
 
@@ -59,34 +69,34 @@ export default function App() {
     setAuthenticated(true)
   }, [])
 
-  const { messages, isLoading, error, docSections, phaseOutputReceived, sendUserMessage, injectPhaseOutput, reset } = useConversation(activePhase, {
+  const { messages, isLoading, error, docSections, phaseOutputReceived, sendUserMessage, injectPhaseOutput, reset, reinitialize } = useConversation(activePhase, {
     onUnauthorized: handleUnauthorized,
-    initialMessages: savedDiscovery?.conversation ?? [],
-    initialDocSections: savedDiscovery?.phaseOutputs?.[savedDiscovery?.currentPhase] ?? {},
+    initialMessages: initialLoad.conversation,
+    initialDocSections: initialLoad.item.phaseOutputs[initialLoad.item.currentPhase] ?? {},
   })
 
-  const [showRestoreIndicator, setShowRestoreIndicator] = useState(
-    () => !!(savedDiscovery?.conversation?.length > 0)
-  )
-
   useEffect(() => {
-    if (isLoading) return
-    if (messages.length === 0) return
+    if (isLoading || messages.length === 0) return
     if (!createdAtRef.current) createdAtRef.current = new Date().toISOString()
     if (Object.keys(docSections).length > 0) {
       const updated = { ...phaseOutputsRef.current, [activePhase]: docSections }
       phaseOutputsRef.current = updated
       setPhaseOutputs(updated)
     }
-    saveDiscovery({
-      version: 1,
-      createdAt: createdAtRef.current,
-      updatedAt: new Date().toISOString(),
+
+    const problemText = phaseOutputsRef.current[1]?.problem
+    const currentItem = discoveries.find(d => d.id === activeDiscoveryId)
+    const derivedName = (problemText && currentItem?.nameSource === 'date')
+      ? deriveDiscoveryName(problemText) : undefined
+
+    saveDiscovery(activeDiscoveryId, {
       currentPhase: activePhase,
       conversation: messages,
       phaseOutputs: phaseOutputsRef.current,
+      name: derivedName,
     })
-  }, [messages, isLoading, docSections, activePhase])
+    if (derivedName) setDiscoveries(getAllDiscoveries())
+  }, [messages, isLoading, docSections, activePhase, activeDiscoveryId])
 
   const handleAdvancePhase = useCallback(() => {
     const output = phaseOutputsRef.current[activePhase]
@@ -114,15 +124,32 @@ export default function App() {
     sendUserMessage(msg)
   }, [messages, isLoading, sendUserMessage])
 
+  const handleSwitchDiscovery = useCallback((id) => {
+    if (id === activeDiscoveryId) return
+    setActiveDiscovery(id)
+    const loaded = loadActiveDiscovery()
+    if (!loaded) return
+    createdAtRef.current    = loaded.item.createdAt
+    phaseOutputsRef.current = loaded.item.phaseOutputs
+    reinitialize(
+      loaded.conversation,
+      loaded.item.phaseOutputs[loaded.item.currentPhase] ?? {}
+    )
+    setPhaseOutputs(loaded.item.phaseOutputs)
+    setActivePhase(loaded.item.currentPhase)
+    setActiveDiscoveryId(id)
+    setDiscoveries(getAllDiscoveries())
+  }, [activeDiscoveryId, reinitialize])
+
   const handleStartNew = useCallback(() => {
-    if (!window.confirm('This will clear your current discovery. Continue?')) return
-    clearDiscovery()
-    createdAtRef.current = null
+    const newDisc = createDiscovery()
+    createdAtRef.current    = newDisc.createdAt
     phaseOutputsRef.current = {}
     setPhaseOutputs({})
     reset()
     setActivePhase(1)
-    setShowRestoreIndicator(false)
+    setActiveDiscoveryId(newDisc.id)
+    setDiscoveries(getAllDiscoveries())
   }, [reset])
 
   const [prefs, setPrefs] = useState(loadPrefs)
@@ -135,7 +162,6 @@ export default function App() {
     })
   }
 
-  // Apply theme to <html>
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', prefs.theme)
   }, [prefs.theme])
@@ -152,15 +178,13 @@ export default function App() {
         onToggleCollapse={() => updatePrefs({ collapsed: !prefs.collapsed })}
         theme={prefs.theme}
         onThemeChange={t => updatePrefs({ theme: t })}
+        discoveries={discoveries}
+        activeDiscoveryId={activeDiscoveryId}
+        onSwitchDiscovery={handleSwitchDiscovery}
         onStartNew={handleStartNew}
       />
 
       <div className="chat-col">
-        {showRestoreIndicator && (
-          <div className="restore-indicator" onClick={() => setShowRestoreIndicator(false)}>
-            Resuming your discovery — Phase {activePhase}, started {formatRestoreDate(savedDiscovery.createdAt)}
-          </div>
-        )}
         <main className="main">
           <ChatWindow
             messages={messages}

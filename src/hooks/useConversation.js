@@ -26,10 +26,15 @@ export function useConversation(phase = 1, { onUnauthorized, initialMessages = [
   )
   const isLoadingRef = useRef(false)
   const prevPhaseRef = useRef(phase)
+  const skipNextPhaseResetRef = useRef(false)
 
   useEffect(() => {
     if (prevPhaseRef.current === phase) return
     prevPhaseRef.current = phase
+    if (skipNextPhaseResetRef.current) {
+      skipNextPhaseResetRef.current = false
+      return
+    }
     setMessages([])
     setError(null)
     setDocSections({})
@@ -91,6 +96,15 @@ export function useConversation(phase = 1, { onUnauthorized, initialMessages = [
     setMessages([])
     setError(null)
     setDocSections({})
+    setPhaseOutputReceived(false)
+  }, [])
+
+  const reinitialize = useCallback((msgs, sections) => {
+    skipNextPhaseResetRef.current = true
+    setMessages(msgs)
+    setDocSections(sections)
+    setPhaseOutputReceived(msgs.some(m => m.role === 'assistant' && m.content?.includes('<output-card>')))
+    setError(null)
   }, [])
 
   return {
@@ -102,5 +116,6 @@ export function useConversation(phase = 1, { onUnauthorized, initialMessages = [
     sendUserMessage,
     injectPhaseOutput,
     reset,
+    reinitialize,
   }
 }

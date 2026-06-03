@@ -1,4 +1,20 @@
-export default function PhaseSidebar({ collapsed, onToggleCollapse, theme, onThemeChange, onStartNew }) {
+function formatRelativeDate(iso) {
+  const diff = Math.floor((Date.now() - new Date(iso)) / 86400000)
+  if (diff === 0) return 'Today'
+  if (diff === 1) return 'Yesterday'
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+export default function PhaseSidebar({
+  collapsed,
+  onToggleCollapse,
+  theme,
+  onThemeChange,
+  onStartNew,
+  discoveries = [],
+  activeDiscoveryId,
+  onSwitchDiscovery,
+}) {
   return (
     <div className={`phase-sidebar${collapsed ? ' collapsed' : ''}`}>
 
@@ -18,28 +34,43 @@ export default function PhaseSidebar({ collapsed, onToggleCollapse, theme, onThe
         )}
       </div>
 
-      <div className="sidebar-spacer" />
-
       {!collapsed && (
-        <div className="sidebar-settings">
-          <div className="settings-label">Theme</div>
-          <div className="theme-btns">
-            {['dark', 'light', 'slate'].map(t => (
+        <>
+          <button className="new-discovery-btn" onClick={onStartNew}>
+            + New discovery
+          </button>
+
+          <div className="discovery-list">
+            {discoveries.map(d => (
               <button
-                key={t}
-                className={`theme-btn${theme === t ? ' on' : ''}`}
-                onClick={() => onThemeChange(t)}
+                key={d.id}
+                className={`discovery-item${d.id === activeDiscoveryId ? ' active' : ''}`}
+                onClick={() => onSwitchDiscovery(d.id)}
               >
-                {t.charAt(0).toUpperCase() + t.slice(1)}
+                <span className="discovery-item-name">{d.name}</span>
+                <span className="discovery-item-meta">
+                  <span className="discovery-item-phase">P{d.currentPhase}</span>
+                  <span className="discovery-item-date">{formatRelativeDate(d.updatedAt)}</span>
+                </span>
               </button>
             ))}
           </div>
-          {onStartNew && (
-            <button className="start-new-btn" onClick={onStartNew}>
-              Start new discovery
-            </button>
-          )}
-        </div>
+
+          <div className="sidebar-settings">
+            <div className="settings-label">Theme</div>
+            <div className="theme-btns">
+              {['dark', 'light', 'slate'].map(t => (
+                <button
+                  key={t}
+                  className={`theme-btn${theme === t ? ' on' : ''}`}
+                  onClick={() => onThemeChange(t)}
+                >
+                  {t.charAt(0).toUpperCase() + t.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
       )}
 
       <div className="sidebar-collapse-btn">
