@@ -21,7 +21,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Invalid request' })
   }
 
-  const { conversationHistory, phase } = req.body
+  const { conversationHistory, phase, mode } = req.body
 
   if (!Array.isArray(conversationHistory) || conversationHistory.length === 0) {
     return res.status(400).json({ error: 'Invalid request' })
@@ -29,7 +29,9 @@ export default async function handler(req, res) {
   if (conversationHistory.length > 100) {
     return res.status(400).json({ error: 'Conversation too long' })
   }
-  const safePhase = Number.isInteger(phase) && phase >= 1 && phase <= 5 ? phase : 1
+  const promptKey = mode === 'ai-discovery'
+    ? 'ai-discovery'
+    : (Number.isInteger(phase) && phase >= 1 && phase <= 5 ? phase : 1)
 
   try {
     const response = await fetch(ANTHROPIC_URL, {
@@ -46,7 +48,7 @@ export default async function handler(req, res) {
         system: [
           {
             type: 'text',
-            text: getSystemPrompt(safePhase),
+            text: getSystemPrompt(promptKey),
             cache_control: { type: 'ephemeral' },
           },
         ],

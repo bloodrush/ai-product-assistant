@@ -9,6 +9,7 @@ const LEGACY_KEY   = 'productAssistant:activeDiscovery'
  * @property {'phase1'|'date'} nameSource
  * @property {string} createdAt
  * @property {string} updatedAt
+ * @property {'product'|'ai-discovery'} mode
  * @property {number} currentPhase
  * @property {Record<number, object>} phaseOutputs
  */
@@ -35,6 +36,7 @@ function loadRegistry() {
     if (!raw) return { version: 2, activeId: null, items: [] }
     const parsed = JSON.parse(raw)
     if (parsed?.version !== 2) return { version: 2, activeId: null, items: [] }
+    parsed.items = parsed.items.map(item => ({ mode: 'product', ...item }))
     return parsed
   } catch { return { version: 2, activeId: null, items: [] } }
 }
@@ -89,6 +91,7 @@ export function migrateLegacyDiscovery() {
       nameSource: problemText ? 'phase1' : 'date',
       createdAt: data.createdAt || new Date().toISOString(),
       updatedAt: data.updatedAt || new Date().toISOString(),
+      mode: 'product',
       currentPhase: data.currentPhase || 1,
       phaseOutputs: data.phaseOutputs || {},
     }
@@ -110,9 +113,10 @@ export function getAllDiscoveries() {
 
 /**
  * Creates a new blank discovery and sets it as active.
+ * @param {{ mode?: 'product'|'ai-discovery' }} [options]
  * @returns {DiscoveryItem}
  */
-export function createDiscovery() {
+export function createDiscovery({ mode = 'product' } = {}) {
   const id = genId()
   const now = new Date().toISOString()
   /** @type {DiscoveryItem} */
@@ -122,6 +126,7 @@ export function createDiscovery() {
     nameSource: 'date',
     createdAt: now,
     updatedAt: now,
+    mode,
     currentPhase: 1,
     phaseOutputs: {},
   }

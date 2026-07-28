@@ -5,3 +5,16 @@ export const PHASES = [
   { id: 4, label: 'Write the Stories',      color: '#9b7ef0', desc: 'Break into buildable work' },
   { id: 5, label: 'Launch Prep',            color: '#3dbab3', desc: 'Get to ship-ready' },
 ]
+
+export const MODES = {
+  product: {
+    id: 'product',
+    label: 'Product Discovery',
+    color: '#f58916',
+  },
+  'ai-discovery': {
+    id: 'ai-discovery',
+    label: 'AI Discovery',
+    color: '#9b7ef0',
+  },
+}
