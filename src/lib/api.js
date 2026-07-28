@@ -1,6 +1,6 @@
 export const UNAUTHORIZED = 'UNAUTHORIZED'
 
-export async function sendMessage(conversationHistory, phase = 1) {
+export async function sendMessage(conversationHistory, phase = 1, mode) {
   const password = sessionStorage.getItem('sharedPassword')
   if (!password) throw new Error(UNAUTHORIZED)
 
@@ -10,7 +10,7 @@ export async function sendMessage(conversationHistory, phase = 1) {
       'Content-Type': 'application/json',
       'x-shared-password': password,
     },
-    body: JSON.stringify({ conversationHistory, phase }),
+    body: JSON.stringify({ conversationHistory, phase, mode }),
   })
 
   if (response.status === 401) {
