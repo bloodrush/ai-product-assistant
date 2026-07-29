@@ -100,32 +100,55 @@ function PhaseRawBody({ output, color }) {
   )
 }
 
+const TRACKER_COLS = [
+  'Title', 'Description', 'Current process', 'Frequency & volume',
+  'Time per instance', 'People / systems', 'Data readiness',
+  'Impact (1-5)', 'Impact rationale', 'Feasibility (1-5)', 'Feasibility rationale',
+  'Interviewee', 'Team', 'Date',
+]
+
+function ScorePips({ score, max = 5 }) {
+  if (score == null) return null
+  return (
+    <span className="score-pips" aria-label={`${score} out of ${max}`}>
+      {Array.from({ length: max }, (_, i) => (
+        <span key={i} className={`score-pip${i < score ? ' filled' : ''}`} />
+      ))}
+    </span>
+  )
+}
+
 function AiDiscoveryPanel({ sections, isLoading }) {
   const [copied, setCopied] = useState(false)
   const { name, team, date, useCases = [], flags = [] } = sections
 
   const copyAll = () => {
-    const lines = []
-    if (name) lines.push(`Interview: ${name}${team ? ` — ${team}` : ''}`)
-    if (date) lines.push(`Date: ${date}`)
-    useCases.forEach((uc, i) => {
-      lines.push('')
-      lines.push(`Use case ${i + 1}: ${uc.title}`)
-      if (uc.description)       lines.push(`Description: ${uc.description}`)
-      if (uc.currentProcess)    lines.push(`Current process: ${uc.currentProcess}`)
-      if (uc.frequency)         lines.push(`Frequency: ${uc.frequency}`)
-      if (uc.timePerInstance)   lines.push(`Time per instance: ${uc.timePerInstance}`)
-      if (uc.peopleAndSystems)  lines.push(`People / systems: ${uc.peopleAndSystems}`)
-      if (uc.dataReadiness)     lines.push(`Data readiness: ${uc.dataReadiness}`)
-      if (uc.impactScore != null)      lines.push(`Impact: ${uc.impactScore}/5 — ${uc.impactRationale ?? ''}`)
-      if (uc.feasibilityScore != null) lines.push(`Feasibility: ${uc.feasibilityScore}/5 — ${uc.feasibilityRationale ?? ''}`)
+    // Tab-separated, header + one row per use case — paste directly into a tracker sheet
+    const rows = [TRACKER_COLS.join('\t')]
+    useCases.forEach(uc => {
+      rows.push([
+        uc.title                ?? '',
+        uc.description          ?? '',
+        uc.currentProcess       ?? '',
+        uc.frequency            ?? '',
+        uc.timePerInstance      ?? '',
+        uc.peopleAndSystems     ?? '',
+        uc.dataReadiness        ?? '',
+        uc.impactScore          ?? '',
+        uc.impactRationale      ?? '',
+        uc.feasibilityScore     ?? '',
+        uc.feasibilityRationale ?? '',
+        name ?? '',
+        team ?? '',
+        date ?? '',
+      ].join('\t'))
     })
     if (flags.length > 0) {
-      lines.push('')
-      lines.push('Flagged for review:')
-      flags.forEach(f => lines.push(`- ${f}`))
+      rows.push('')
+      rows.push('Flagged for review:')
+      flags.forEach(f => rows.push(`  ${f}`))
     }
-    navigator.clipboard.writeText(lines.join('\n').trim())
+    navigator.clipboard.writeText(rows.join('\n'))
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -150,17 +173,7 @@ function AiDiscoveryPanel({ sections, isLoading }) {
 
       {useCases.map((uc, i) => (
         <div key={i} className="ai-use-case">
-          <div className="ai-uc-header">
-            <span className="ai-uc-title">{uc.title}</span>
-            <div className="ai-uc-scores">
-              {uc.impactScore != null && (
-                <span className="ai-uc-score" title={`Impact: ${uc.impactRationale}`}>I{uc.impactScore}</span>
-              )}
-              {uc.feasibilityScore != null && (
-                <span className="ai-uc-score" title={`Feasibility: ${uc.feasibilityRationale}`}>F{uc.feasibilityScore}</span>
-              )}
-            </div>
-          </div>
+          <span className="ai-uc-title">{uc.title}</span>
 
           {uc.description && <p className="ai-uc-desc">{uc.description}</p>}
 
@@ -178,10 +191,25 @@ function AiDiscoveryPanel({ sections, isLoading }) {
             ))}
           </div>
 
-          {(uc.impactRationale || uc.feasibilityRationale) && (
-            <div className="ai-uc-rationale">
-              {uc.impactRationale      && <span>Impact: {uc.impactRationale}</span>}
-              {uc.feasibilityRationale && <span>Feasibility: {uc.feasibilityRationale}</span>}
+          {(uc.impactScore != null || uc.feasibilityScore != null) && (
+            <div className="ai-uc-score-block">
+              {uc.impactScore != null && (
+                <div className="ai-uc-score-row">
+                  <span className="ai-uc-score-label">Impact</span>
+                  <ScorePips score={uc.impactScore} />
+                  <span className="ai-uc-score-num">{uc.impactScore}/5</span>
+                  {uc.impactRationale && <span className="ai-uc-score-note">{uc.impactRationale}</span>}
+                </div>
+              )}
+              {uc.feasibilityScore != null && (
+                <div className="ai-uc-score-row">
+                  <span className="ai-uc-score-label">Feasibility</span>
+                  <ScorePips score={uc.feasibilityScore} />
+                  <span className="ai-uc-score-num">{uc.feasibilityScore}/5</span>
+                  {uc.feasibilityRationale && <span className="ai-uc-score-note">{uc.feasibilityRationale}</span>}
+                </div>
+              )}
+              <span className="ai-proposed-badge">⚠ AI-proposed — confirm before finalising</span>
             </div>
           )}
         </div>
@@ -196,7 +224,7 @@ function AiDiscoveryPanel({ sections, isLoading }) {
 
       <div className="acc-actions">
         <button className="doc-action-btn" onClick={copyAll}>
-          {copied ? '✓ Copied' : 'Copy outcome'}
+          {copied ? '✓ Copied' : 'Copy for tracker'}
         </button>
       </div>
     </div>

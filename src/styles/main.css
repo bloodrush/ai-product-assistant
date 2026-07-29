@@ -105,7 +105,7 @@ body {
 /* ─── Shell layout ────────────────────────────────────────────────── */
 .app-shell {
   display: grid;
-  grid-template-columns: 220px 1fr 280px;
+  grid-template-columns: 220px 1fr 340px;
   height: 100vh;
   overflow: hidden;
 }
@@ -1190,37 +1190,12 @@ body {
   gap: 7px;
 }
 
-.ai-uc-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-}
-
 .ai-uc-title {
   font-size: 12px;
   font-weight: 500;
   color: var(--text);
   line-height: 1.4;
-  flex: 1;
-}
-
-.ai-uc-scores {
-  display: flex;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.ai-uc-score {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #9b7ef0;
-  background: rgba(155, 126, 240, 0.15);
-  border-radius: 3px;
-  padding: 2px 5px;
-  cursor: default;
+  display: block;
 }
 
 .ai-uc-desc {
@@ -1258,15 +1233,74 @@ body {
   line-height: 1.45;
 }
 
-.ai-uc-rationale {
+/* Score block — pip visualization + AI-proposed disclaimer */
+.ai-uc-score-block {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  padding-top: 7px;
+  gap: 5px;
+  padding-top: 8px;
   border-top: 1px solid color-mix(in srgb, #9b7ef0 15%, transparent);
+}
+
+.ai-uc-score-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.ai-uc-score-label {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9b7ef0;
+  opacity: 0.8;
+  flex-shrink: 0;
+  min-width: 64px;
+}
+
+.score-pips {
+  display: flex;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.score-pip {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: color-mix(in srgb, #9b7ef0 18%, transparent);
+  border: 1px solid color-mix(in srgb, #9b7ef0 32%, transparent);
+  flex-shrink: 0;
+}
+
+.score-pip.filled {
+  background: #9b7ef0;
+  border-color: #9b7ef0;
+}
+
+.ai-uc-score-num {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: #9b7ef0;
+  flex-shrink: 0;
+}
+
+.ai-uc-score-note {
   font-size: 10px;
   color: var(--text-muted);
   line-height: 1.4;
+  flex: 1;
+}
+
+.ai-proposed-badge {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  margin-top: 2px;
+  opacity: 0.8;
 }
 
 .ai-panel-flags {
