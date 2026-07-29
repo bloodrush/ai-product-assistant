@@ -1082,3 +1082,211 @@ body {
 }
 
 .password-gate__btn:hover { opacity: 0.85; }
+
+/* ─── Mode picker (sidebar) ───────────────────────────────────────── */
+.mode-picker {
+  margin: 8px 10px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mode-option-btn {
+  display: flex;
+  align-items: center;
+  padding: 7px 10px;
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--transition);
+  text-align: left;
+}
+
+.mode-option-btn.product:hover {
+  border-color: #f58916;
+  color: #f58916;
+  background: rgba(245, 137, 22, 0.08);
+}
+
+.mode-option-btn.ai-disc:hover {
+  border-color: #9b7ef0;
+  color: #9b7ef0;
+  background: rgba(155, 126, 240, 0.08);
+}
+
+.mode-picker-cancel {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 10px;
+  text-align: center;
+  width: 100%;
+  transition: color var(--transition);
+}
+
+.mode-picker-cancel:hover { color: var(--text-muted); }
+
+.discovery-item-phase.ai-mode {
+  background: rgba(155, 126, 240, 0.12);
+  color: #9b7ef0;
+}
+
+/* ─── AI Discovery panel (doc panel) ─────────────────────────────── */
+.ai-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ai-panel-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+
+.ai-panel-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.ai-panel-team {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.ai-panel-date {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.ai-use-case {
+  background: color-mix(in srgb, #9b7ef0 10%, transparent);
+  border: 1px solid color-mix(in srgb, #9b7ef0 20%, transparent);
+  border-radius: 6px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.ai-uc-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ai-uc-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.4;
+  flex: 1;
+}
+
+.ai-uc-scores {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.ai-uc-score {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #9b7ef0;
+  background: rgba(155, 126, 240, 0.15);
+  border-radius: 3px;
+  padding: 2px 5px;
+  cursor: default;
+}
+
+.ai-uc-desc {
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.ai-uc-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.ai-uc-field {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 11px;
+}
+
+.ai-uc-field-label {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9b7ef0;
+  opacity: 0.75;
+  flex-shrink: 0;
+  min-width: 72px;
+}
+
+.ai-uc-field-value {
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.ai-uc-rationale {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-top: 7px;
+  border-top: 1px solid color-mix(in srgb, #9b7ef0 15%, transparent);
+  font-size: 10px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.ai-panel-flags {
+  background: rgba(220, 80, 80, 0.06);
+  border: 1px solid rgba(220, 80, 80, 0.15);
+  border-radius: 6px;
+  padding: 10px 14px;
+}
+
+.ai-panel-flags-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #e07070;
+  margin-bottom: 6px;
+}
+
+.ai-panel-flag {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}

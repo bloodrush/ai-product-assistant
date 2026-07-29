@@ -25,9 +25,14 @@ const PHASE_EMPTY = {
   },
 }
 
-export default function ChatWindow({ messages, isLoading, error, phase = 1, showAdvanceButton, onAdvancePhase, onInjectSampleOutput }) {
+const AI_EMPTY = {
+  label: 'AI Discovery Interview',
+  hint: 'Say hello to start the interview. I\'ll guide you through a conversation about your day-to-day work to surface AI opportunities.',
+}
+
+export default function ChatWindow({ messages, isLoading, error, phase = 1, mode = 'product', showAdvanceButton, onAdvancePhase, onInjectSampleOutput }) {
   const bottomRef = useRef(null)
-  const empty = PHASE_EMPTY[phase] ?? PHASE_EMPTY[1]
+  const empty = mode === 'ai-discovery' ? AI_EMPTY : (PHASE_EMPTY[phase] ?? PHASE_EMPTY[1])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -71,7 +76,7 @@ export default function ChatWindow({ messages, isLoading, error, phase = 1, show
         </div>
       )}
 
-      {showAdvanceButton && !isLoading && (
+      {showAdvanceButton && !isLoading && mode !== 'ai-discovery' && (
         <div className="phase-advance-cta">
           <button className="phase-advance-btn" onClick={onAdvancePhase}>
             Continue to Phase {phase + 1} →

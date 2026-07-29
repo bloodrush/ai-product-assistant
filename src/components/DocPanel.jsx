@@ -100,7 +100,110 @@ function PhaseRawBody({ output, color }) {
   )
 }
 
-export default function DocPanel({ sections = {}, isLoading = false, currentPhase = 1, phaseOutputs = {} }) {
+function AiDiscoveryPanel({ sections, isLoading }) {
+  const [copied, setCopied] = useState(false)
+  const { name, team, date, useCases = [], flags = [] } = sections
+
+  const copyAll = () => {
+    const lines = []
+    if (name) lines.push(`Interview: ${name}${team ? ` — ${team}` : ''}`)
+    if (date) lines.push(`Date: ${date}`)
+    useCases.forEach((uc, i) => {
+      lines.push('')
+      lines.push(`Use case ${i + 1}: ${uc.title}`)
+      if (uc.description)       lines.push(`Description: ${uc.description}`)
+      if (uc.currentProcess)    lines.push(`Current process: ${uc.currentProcess}`)
+      if (uc.frequency)         lines.push(`Frequency: ${uc.frequency}`)
+      if (uc.timePerInstance)   lines.push(`Time per instance: ${uc.timePerInstance}`)
+      if (uc.peopleAndSystems)  lines.push(`People / systems: ${uc.peopleAndSystems}`)
+      if (uc.dataReadiness)     lines.push(`Data readiness: ${uc.dataReadiness}`)
+      if (uc.impactScore != null)      lines.push(`Impact: ${uc.impactScore}/5 — ${uc.impactRationale ?? ''}`)
+      if (uc.feasibilityScore != null) lines.push(`Feasibility: ${uc.feasibilityScore}/5 — ${uc.feasibilityRationale ?? ''}`)
+    })
+    if (flags.length > 0) {
+      lines.push('')
+      lines.push('Flagged for review:')
+      flags.forEach(f => lines.push(`- ${f}`))
+    }
+    navigator.clipboard.writeText(lines.join('\n').trim())
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  if (useCases.length === 0) {
+    return (
+      <span className="acc-empty">
+        {isLoading ? 'Interview in progress…' : 'Interview not yet complete.'}
+      </span>
+    )
+  }
+
+  return (
+    <div className="ai-panel">
+      {(name || team) && (
+        <div className="ai-panel-meta">
+          {name && <span className="ai-panel-name">{name}</span>}
+          {team && <span className="ai-panel-team">{team}</span>}
+          {date && <span className="ai-panel-date">{date}</span>}
+        </div>
+      )}
+
+      {useCases.map((uc, i) => (
+        <div key={i} className="ai-use-case">
+          <div className="ai-uc-header">
+            <span className="ai-uc-title">{uc.title}</span>
+            <div className="ai-uc-scores">
+              {uc.impactScore != null && (
+                <span className="ai-uc-score" title={`Impact: ${uc.impactRationale}`}>I{uc.impactScore}</span>
+              )}
+              {uc.feasibilityScore != null && (
+                <span className="ai-uc-score" title={`Feasibility: ${uc.feasibilityRationale}`}>F{uc.feasibilityScore}</span>
+              )}
+            </div>
+          </div>
+
+          {uc.description && <p className="ai-uc-desc">{uc.description}</p>}
+
+          <div className="ai-uc-fields">
+            {[
+              ['Frequency',        uc.frequency],
+              ['Time',             uc.timePerInstance],
+              ['People / systems', uc.peopleAndSystems],
+              ['Data',             uc.dataReadiness],
+            ].filter(([, v]) => v).map(([label, value]) => (
+              <div key={label} className="ai-uc-field">
+                <span className="ai-uc-field-label">{label}</span>
+                <span className="ai-uc-field-value">{value}</span>
+              </div>
+            ))}
+          </div>
+
+          {(uc.impactRationale || uc.feasibilityRationale) && (
+            <div className="ai-uc-rationale">
+              {uc.impactRationale      && <span>Impact: {uc.impactRationale}</span>}
+              {uc.feasibilityRationale && <span>Feasibility: {uc.feasibilityRationale}</span>}
+            </div>
+          )}
+        </div>
+      ))}
+
+      {flags.length > 0 && (
+        <div className="ai-panel-flags">
+          <div className="ai-panel-flags-label">⚠ Flagged for review</div>
+          {flags.map((f, i) => <p key={i} className="ai-panel-flag">{f}</p>)}
+        </div>
+      )}
+
+      <div className="acc-actions">
+        <button className="doc-action-btn" onClick={copyAll}>
+          {copied ? '✓ Copied' : 'Copy outcome'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+export default function DocPanel({ sections = {}, isLoading = false, currentPhase = 1, phaseOutputs = {}, mode = 'product' }) {
   const [copied, setCopied] = useState(false)
   const [expandedDone, setExpandedDone] = useState(new Set())
 
@@ -172,6 +275,19 @@ ${bodyHtml}
   const hasActiveContent = currentPhase === 1
     ? filledKeys.length > 0
     : !!(activeOutput.rawText)
+
+  if (mode === 'ai-discovery') {
+    return (
+      <div className="doc-panel">
+        <div className="doc-panel-header">
+          <span className="doc-panel-title">Outcome</span>
+        </div>
+        <div className="doc-panel-body">
+          <AiDiscoveryPanel sections={sections} isLoading={isLoading} />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="doc-panel">

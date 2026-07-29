@@ -4,6 +4,7 @@ export default function ChatInput({ onSend, isLoading, phaseComplete }) {
   const [value, setValue] = useState('')
   const textareaRef = useRef(null)
   const isDisabled = isLoading || phaseComplete
+  const prevLoadingRef = useRef(isLoading)
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -11,6 +12,13 @@ export default function ChatInput({ onSend, isLoading, phaseComplete }) {
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`
     }
   }, [value])
+
+  useEffect(() => {
+    if (prevLoadingRef.current && !isLoading && !phaseComplete) {
+      textareaRef.current?.focus()
+    }
+    prevLoadingRef.current = isLoading
+  }, [isLoading, phaseComplete])
 
   const handleSend = () => {
     if (!value.trim() || isDisabled) return

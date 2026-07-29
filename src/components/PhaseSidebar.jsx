@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 function formatRelativeDate(iso) {
   const diff = Math.floor((Date.now() - new Date(iso)) / 86400000)
   if (diff === 0) return 'Today'
@@ -15,6 +17,13 @@ export default function PhaseSidebar({
   activeDiscoveryId,
   onSwitchDiscovery,
 }) {
+  const [pickerOpen, setPickerOpen] = useState(false)
+
+  const startNew = (mode) => {
+    setPickerOpen(false)
+    onStartNew(mode)
+  }
+
   return (
     <div className={`phase-sidebar${collapsed ? ' collapsed' : ''}`}>
 
@@ -36,20 +45,36 @@ export default function PhaseSidebar({
 
       {!collapsed && (
         <>
-          <button className="new-discovery-btn" onClick={onStartNew}>
-            + New discovery
-          </button>
+          {pickerOpen ? (
+            <div className="mode-picker">
+              <button className="mode-option-btn product" onClick={() => startNew('product')}>
+                Product discovery
+              </button>
+              <button className="mode-option-btn ai-disc" onClick={() => startNew('ai-discovery')}>
+                AI interview
+              </button>
+              <button className="mode-picker-cancel" onClick={() => setPickerOpen(false)}>
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button className="new-discovery-btn" onClick={() => setPickerOpen(true)}>
+              + New
+            </button>
+          )}
 
           <div className="discovery-list">
             {discoveries.map(d => (
               <button
                 key={d.id}
                 className={`discovery-item${d.id === activeDiscoveryId ? ' active' : ''}`}
-                onClick={() => onSwitchDiscovery(d.id)}
+                onClick={() => { setPickerOpen(false); onSwitchDiscovery(d.id) }}
               >
                 <span className="discovery-item-name">{d.name}</span>
                 <span className="discovery-item-meta">
-                  <span className="discovery-item-phase">P{d.currentPhase}</span>
+                  <span className={`discovery-item-phase${d.mode === 'ai-discovery' ? ' ai-mode' : ''}`}>
+                    {d.mode === 'ai-discovery' ? 'AI' : `P${d.currentPhase}`}
+                  </span>
                   <span className="discovery-item-date">{formatRelativeDate(d.updatedAt)}</span>
                 </span>
               </button>

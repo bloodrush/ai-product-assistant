@@ -47,6 +47,7 @@ export default function App() {
   })
 
   const [activePhase, setActivePhase] = useState(initialLoad.item.currentPhase)
+  const [activeMode, setActiveMode] = useState(initialLoad.item.mode ?? 'product')
   const [activeDiscoveryId, setActiveDiscoveryId] = useState(initialLoad.item.id)
   const [discoveries, setDiscoveries] = useState(() => getAllDiscoveries())
   const createdAtRef = useRef(initialLoad.item.createdAt)
@@ -73,6 +74,7 @@ export default function App() {
     onUnauthorized: handleUnauthorized,
     initialMessages: initialLoad.conversation,
     initialDocSections: initialLoad.item.phaseOutputs[initialLoad.item.currentPhase] ?? {},
+    mode: activeMode,
   })
 
   useEffect(() => {
@@ -137,17 +139,19 @@ export default function App() {
     )
     setPhaseOutputs(loaded.item.phaseOutputs)
     setActivePhase(loaded.item.currentPhase)
+    setActiveMode(loaded.item.mode ?? 'product')
     setActiveDiscoveryId(id)
     setDiscoveries(getAllDiscoveries())
   }, [activeDiscoveryId, reinitialize])
 
-  const handleStartNew = useCallback(() => {
-    const newDisc = createDiscovery()
+  const handleStartNew = useCallback((mode = 'product') => {
+    const newDisc = createDiscovery({ mode })
     createdAtRef.current    = newDisc.createdAt
     phaseOutputsRef.current = {}
     setPhaseOutputs({})
     reset()
     setActivePhase(1)
+    setActiveMode(mode)
     setActiveDiscoveryId(newDisc.id)
     setDiscoveries(getAllDiscoveries())
   }, [reset])
@@ -191,6 +195,7 @@ export default function App() {
             isLoading={isLoading}
             error={error}
             phase={activePhase}
+            mode={activeMode}
             showAdvanceButton={phaseOutputReceived && activePhase < 5}
             onAdvancePhase={handleAdvancePhase}
             onInjectSampleOutput={isDev && !phaseOutputReceived ? handleInjectSampleOutput : undefined}
@@ -206,6 +211,7 @@ export default function App() {
         isLoading={isLoading}
         currentPhase={activePhase}
         phaseOutputs={phaseOutputs}
+        mode={activeMode}
       />
 
     </div>
