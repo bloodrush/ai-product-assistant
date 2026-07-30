@@ -100,7 +100,10 @@ export default async function handler(req, res) {
 
     // Create transcript doc
     const docTitle = `AI Interview — ${name ?? 'Unknown'} — ${team ?? '—'} — ${date ?? '—'}`
-    const docUrl = await createTranscriptDoc(drive, folderId, docTitle, transcript, name, team, date).catch(e => { throw new Error(`createDoc: ${e.message}`) })
+    const docUrl = await createTranscriptDoc(drive, folderId, docTitle, transcript, name, team, date).catch(e => {
+      console.warn('createDoc failed (non-fatal):', e.message)
+      return null
+    })
 
     const sheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}`
     const today = date ?? new Date().toLocaleDateString('en-GB')
@@ -127,7 +130,7 @@ export default async function handler(req, res) {
         uc.feasibilityScore ?? '',
         `=IFERROR(AVERAGE(L${rowNum},M${rowNum}),"")`,
         'Not started',
-        `Transcript: ${docUrl}${flagNote}\n⚠ AI-proposed scores — confirm before finalising`,
+        `${docUrl ? `Transcript: ${docUrl}\n` : ''}⚠ AI-proposed scores — confirm before finalising${flagNote}`,
       ]
     })
 
