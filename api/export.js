@@ -47,18 +47,19 @@ async function ensureHeader(sheets, spreadsheetId, tabName) {
 }
 
 async function createTranscriptDoc(docs, drive, folderId, title, transcript, name, team, date) {
-  const docRes = await docs.documents.create({ requestBody: { title } })
-  const docId = docRes.data.documentId
+  // Create directly in Drive with native Google Doc MIME type and parent folder in one call.
+  // Doing docs.documents.create then drive.files.update(addParents) can leave the doc in a
+  // state where batchUpdate treats it as an Office file and rejects insertText.
+  const fileRes = await drive.files.create({
+    requestBody: {
+      name: title,
+      mimeType: 'application/vnd.google-apps.document',
+      ...(folderId ? { parents: [folderId] } : {}),
+    },
+    fields: 'id',
+  })
+  const docId = fileRes.data.id
   const docUrl = `https://docs.google.com/document/d/${docId}`
-
-  if (folderId) {
-    await drive.files.update({
-      fileId: docId,
-      addParents: folderId,
-      removeParents: 'root',
-      fields: 'id, parents',
-    })
-  }
 
   const headerText = `AI Discovery Interview\nInterviewee: ${name ?? '—'}\nTeam: ${team ?? '—'}\nDate: ${date ?? '—'}\n\n`
   const body = headerText + (transcript ?? '')
