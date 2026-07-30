@@ -95,12 +95,12 @@ export default async function handler(req, res) {
     const sheets = google.sheets({ version: 'v4', auth })
     const drive  = google.drive({ version: 'v3', auth })
 
-    await ensureHeader(sheets, spreadsheetId, tabName)
-    const nextId = await getNextId(sheets, spreadsheetId, tabName)
+    await ensureHeader(sheets, spreadsheetId, tabName).catch(e => { throw new Error(`ensureHeader: ${e.message}`) })
+    const nextId = await getNextId(sheets, spreadsheetId, tabName).catch(e => { throw new Error(`getNextId: ${e.message}`) })
 
     // Create transcript doc
     const docTitle = `AI Interview — ${name ?? 'Unknown'} — ${team ?? '—'} — ${date ?? '—'}`
-    const docUrl = await createTranscriptDoc(drive, folderId, docTitle, transcript, name, team, date)
+    const docUrl = await createTranscriptDoc(drive, folderId, docTitle, transcript, name, team, date).catch(e => { throw new Error(`createDoc: ${e.message}`) })
 
     const sheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}`
     const today = date ?? new Date().toLocaleDateString('en-GB')
@@ -137,7 +137,7 @@ export default async function handler(req, res) {
       valueInputOption: 'USER_ENTERED',
       insertDataOption: 'INSERT_ROWS',
       requestBody: { values: rows },
-    })
+    }).catch(e => { throw new Error(`appendRows: ${e.message}`) })
 
     return res.status(200).json({
       sheetUrl,
