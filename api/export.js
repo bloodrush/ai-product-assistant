@@ -15,6 +15,7 @@ function getAuth() {
     scopes: [
       'https://www.googleapis.com/auth/spreadsheets',
       'https://www.googleapis.com/auth/drive',
+      'https://www.googleapis.com/auth/documents',
     ],
   })
 }
@@ -25,7 +26,6 @@ async function getNextId(sheets, spreadsheetId, tabName) {
     range: `${tabName}!A:A`,
   })
   const values = res.data.values ?? []
-  // Row 1 is header, rows 2+ are data
   return Math.max(1, values.length)
 }
 
@@ -45,26 +45,30 @@ async function ensureHeader(sheets, spreadsheetId, tabName) {
   }
 }
 
-async function createTranscriptDoc(drive, folderId, title, transcript, name, team, date) {
-  const headerText = `AI Discovery Interview\nInterviewee: ${name ?? '—'}\nTeam: ${team ?? '—'}\nDate: ${date ?? '—'}\n\n`
-  const body = headerText + (transcript ?? '')
-
-  // Upload as text/plain with mimeType=Google Doc — Drive converts on ingest.
-  // This avoids docs.documents.batchUpdate insertText which fails on service-account-created docs.
+async function createTranscriptDoc(drive, docs, folderId, title, transcript, name, team, date) {
+  // Create a blank native Google Doc (no media upload = no storage quota consumed).
   const fileRes = await drive.files.create({
     requestBody: {
       name: title,
       mimeType: 'application/vnd.google-apps.document',
       ...(folderId ? { parents: [folderId] } : {}),
     },
-    media: {
-      mimeType: 'text/plain',
-      body,
-    },
     fields: 'id',
   })
+  const docId = fileRes.data.id
 
-  return `https://docs.google.com/document/d/${fileRes.data.id}`
+  const headerText = `AI Discovery Interview\nInterviewee: ${name ?? '—'}\nTeam: ${team ?? '—'}\nDate: ${date ?? '—'}\n\n`
+  const body = headerText + (transcript ?? '')
+
+  // Insert text via Docs API — native Google Docs don't consume Drive storage.
+  await docs.documents.batchUpdate({
+    documentId: docId,
+    requestBody: {
+      requests: [{ insertText: { location: { index: 1 }, text: body } }],
+    },
+  })
+
+  return `https://docs.google.com/document/d/${docId}`
 }
 
 export default async function handler(req, res) {
@@ -87,33 +91,30 @@ export default async function handler(req, res) {
   try {
     const auth = getAuth()
     const spreadsheetId = process.env.GOOGLE_SHEET_ID
-    const folderId     = process.env.GOOGLE_DRIVE_FOLDER_ID ?? null
-    const tabName      = process.env.GOOGLE_SHEET_TAB ?? 'AI Tracker'
+    const folderId      = process.env.GOOGLE_DRIVE_FOLDER_ID ?? null
+    const tabName       = process.env.GOOGLE_SHEET_TAB ?? 'AI Tracker'
 
     if (!spreadsheetId) throw new Error('GOOGLE_SHEET_ID is not set')
 
     const sheets = google.sheets({ version: 'v4', auth })
     const drive  = google.drive({ version: 'v3', auth })
+    const docs   = google.docs({ version: 'v1', auth })
 
-    await ensureHeader(sheets, spreadsheetId, tabName).catch(e => { throw new Error(`ensureHeader: ${e.message}`) })
-    const nextId = await getNextId(sheets, spreadsheetId, tabName).catch(e => { throw new Error(`getNextId: ${e.message}`) })
+    await ensureHeader(sheets, spreadsheetId, tabName)
+    const nextId = await getNextId(sheets, spreadsheetId, tabName)
 
-    // Create transcript doc
     const docTitle = `AI Interview — ${name ?? 'Unknown'} — ${team ?? '—'} — ${date ?? '—'}`
-    const docUrl = await createTranscriptDoc(drive, folderId, docTitle, transcript, name, team, date).catch(e => {
+    const docUrl = await createTranscriptDoc(drive, docs, folderId, docTitle, transcript, name, team, date).catch(e => {
       console.warn('createDoc failed (non-fatal):', e.message)
       return null
     })
 
     const sheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}`
     const today = date ?? new Date().toLocaleDateString('en-GB')
-
-    const flagNote = flags.length > 0
-      ? `\nFlagged: ${flags.join('; ')}`
-      : ''
+    const flagNote = flags.length > 0 ? `Flagged: ${flags.join('; ')}` : ''
 
     const rows = useCases.map((uc, idx) => {
-      const rowNum = nextId + idx + 1  // +1 for header row
+      const rowNum = nextId + idx + 1
       return [
         nextId + idx,
         today,
@@ -130,7 +131,7 @@ export default async function handler(req, res) {
         uc.feasibilityScore ?? '',
         `=IFERROR(AVERAGE(L${rowNum},M${rowNum}),"")`,
         'Not started',
-        `${docUrl ? `Transcript: ${docUrl}\n` : ''}⚠ AI-proposed scores — confirm before finalising${flagNote}`,
+        [docUrl ? `Transcript: ${docUrl}` : '', '⚠ AI-proposed scores — confirm before finalising', flagNote].filter(Boolean).join('\n'),
       ]
     })
 
@@ -140,13 +141,9 @@ export default async function handler(req, res) {
       valueInputOption: 'USER_ENTERED',
       insertDataOption: 'INSERT_ROWS',
       requestBody: { values: rows },
-    }).catch(e => { throw new Error(`appendRows: ${e.message}`) })
-
-    return res.status(200).json({
-      sheetUrl,
-      docUrl,
-      rowsAdded: rows.length,
     })
+
+    return res.status(200).json({ sheetUrl, docUrl, rowsAdded: rows.length })
   } catch (err) {
     console.error('Export error:', err)
     return res.status(500).json({ error: err.message ?? 'Export failed' })
