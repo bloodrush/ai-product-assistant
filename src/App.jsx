@@ -126,6 +126,8 @@ export default function App() {
     sendUserMessage(msg)
   }, [messages, isLoading, sendUserMessage])
 
+  const [exportState, setExportState] = useState(null)
+
   const handleSwitchDiscovery = useCallback((id) => {
     if (id === activeDiscoveryId) return
     setActiveDiscovery(id)
@@ -142,6 +144,7 @@ export default function App() {
     setActiveMode(loaded.item.mode ?? 'product')
     setActiveDiscoveryId(id)
     setDiscoveries(getAllDiscoveries())
+    setExportState(null)
   }, [activeDiscoveryId, reinitialize])
 
   const handleStartNew = useCallback((mode = 'product') => {
@@ -154,7 +157,35 @@ export default function App() {
     setActiveMode(mode)
     setActiveDiscoveryId(newDisc.id)
     setDiscoveries(getAllDiscoveries())
+    setExportState(null)
   }, [reset])
+
+  const handleExport = useCallback(async () => {
+    const { name, team, date, useCases = [], flags = [] } = docSections
+    if (useCases.length === 0) return
+
+    const transcript = messages
+      .filter(m => m.role === 'assistant')
+      .map(m => m.content)
+      .join('\n\n---\n\n')
+
+    setExportState('loading')
+    try {
+      const res = await fetch('/api/export', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-shared-password': sessionStorage.getItem('sharedPassword') ?? '',
+        },
+        body: JSON.stringify({ session: { name, team, date }, useCases, flags, transcript }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Export failed')
+      setExportState({ sheetUrl: data.sheetUrl, docUrl: data.docUrl })
+    } catch (err) {
+      setExportState({ error: err.message })
+    }
+  }, [docSections, messages])
 
   const [prefs, setPrefs] = useState(loadPrefs)
 
@@ -212,6 +243,8 @@ export default function App() {
         currentPhase={activePhase}
         phaseOutputs={phaseOutputs}
         mode={activeMode}
+        onExport={activeMode === 'ai-discovery' ? handleExport : undefined}
+        exportState={exportState}
       />
 
     </div>

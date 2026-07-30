@@ -118,7 +118,7 @@ function ScorePips({ score, max = 5 }) {
   )
 }
 
-function AiDiscoveryPanel({ sections, isLoading }) {
+function AiDiscoveryPanel({ sections, isLoading, onExport, exportState }) {
   const [copied, setCopied] = useState(false)
   const { name, team, date, useCases = [], flags = [] } = sections
 
@@ -226,12 +226,36 @@ function AiDiscoveryPanel({ sections, isLoading }) {
         <button className="doc-action-btn" onClick={copyAll}>
           {copied ? '✓ Copied' : 'Copy for tracker'}
         </button>
+        {onExport && (
+          <button
+            className="doc-action-btn export-btn"
+            onClick={onExport}
+            disabled={exportState === 'loading'}
+          >
+            {exportState === 'loading'
+              ? 'Exporting…'
+              : exportState === 'done'
+                ? '✓ Exported'
+                : exportState === 'error'
+                  ? 'Retry export'
+                  : 'Export to tracker'}
+          </button>
+        )}
       </div>
+      {exportState?.sheetUrl && (
+        <div className="export-links">
+          <a href={exportState.sheetUrl} target="_blank" rel="noreferrer" className="export-link">Open sheet</a>
+          {exportState.docUrl && <a href={exportState.docUrl} target="_blank" rel="noreferrer" className="export-link">Open transcript</a>}
+        </div>
+      )}
+      {exportState?.error && (
+        <p className="export-error">{exportState.error}</p>
+      )}
     </div>
   )
 }
 
-export default function DocPanel({ sections = {}, isLoading = false, currentPhase = 1, phaseOutputs = {}, mode = 'product' }) {
+export default function DocPanel({ sections = {}, isLoading = false, currentPhase = 1, phaseOutputs = {}, mode = 'product', onExport, exportState }) {
   const [copied, setCopied] = useState(false)
   const [expandedDone, setExpandedDone] = useState(new Set())
 
@@ -311,7 +335,7 @@ ${bodyHtml}
           <span className="doc-panel-title">Outcome</span>
         </div>
         <div className="doc-panel-body">
-          <AiDiscoveryPanel sections={sections} isLoading={isLoading} />
+          <AiDiscoveryPanel sections={sections} isLoading={isLoading} onExport={onExport} exportState={exportState} />
         </div>
       </div>
     )
