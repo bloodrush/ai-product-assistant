@@ -105,8 +105,8 @@ export default async function handler(req, res) {
 
     const docTitle = `AI Interview — ${name ?? 'Unknown'} — ${team ?? '—'} — ${date ?? '—'}`
     const docUrl = await createTranscriptDoc(drive, docs, folderId, docTitle, transcript, name, team, date).catch(e => {
-      console.warn('createDoc failed (non-fatal):', e.message)
-      return null
+      console.warn('createDoc failed:', e.message)
+      return `ERROR: ${e.message}`
     })
 
     const sheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}`
