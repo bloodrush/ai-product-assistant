@@ -245,7 +245,7 @@ function AiDiscoveryPanel({ sections, isLoading, onExport, exportState }) {
       {exportState?.sheetUrl && (
         <div className="export-links">
           <a href={exportState.sheetUrl} target="_blank" rel="noreferrer" className="export-link">Open sheet</a>
-          {exportState.docUrl && <a href={exportState.docUrl} target="_blank" rel="noreferrer" className="export-link">Open transcript</a>}
+          {exportState.transcriptUrl && <a href={exportState.transcriptUrl} target="_blank" rel="noreferrer" className="export-link">Open transcript</a>}
         </div>
       )}
       {exportState?.error && (

@@ -181,7 +181,7 @@ export default function App() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Export failed')
-      setExportState({ sheetUrl: data.sheetUrl, docUrl: data.docUrl })
+      setExportState({ sheetUrl: data.sheetUrl, transcriptUrl: data.transcriptUrl })
     } catch (err) {
       setExportState({ error: err.message })
     }

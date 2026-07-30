@@ -12,11 +12,7 @@ function getAuth() {
   if (!raw) throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON is not set')
   return new google.auth.GoogleAuth({
     credentials: JSON.parse(raw),
-    scopes: [
-      'https://www.googleapis.com/auth/spreadsheets',
-      'https://www.googleapis.com/auth/drive',
-      'https://www.googleapis.com/auth/documents',
-    ],
+    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
   })
 }
 
@@ -45,30 +41,38 @@ async function ensureHeader(sheets, spreadsheetId, tabName) {
   }
 }
 
-async function createTranscriptDoc(drive, docs, folderId, title, transcript, name, team, date) {
-  // Create a blank native Google Doc (no media upload = no storage quota consumed).
-  const fileRes = await drive.files.create({
-    requestBody: {
-      name: title,
-      mimeType: 'application/vnd.google-apps.document',
-      ...(folderId ? { parents: [folderId] } : {}),
-    },
-    fields: 'id',
-  })
-  const docId = fileRes.data.id
+async function createTranscriptTab(sheets, spreadsheetId, name, team, date, transcript) {
+  const tabTitle = `T — ${name ?? 'Unknown'} — ${date ?? '—'}`.slice(0, 100)
 
-  const headerText = `AI Discovery Interview\nInterviewee: ${name ?? '—'}\nTeam: ${team ?? '—'}\nDate: ${date ?? '—'}\n\n`
-  const body = headerText + (transcript ?? '')
-
-  // Insert text via Docs API — native Google Docs don't consume Drive storage.
-  await docs.documents.batchUpdate({
-    documentId: docId,
+  // Add a new sheet tab
+  const batchRes = await sheets.spreadsheets.batchUpdate({
+    spreadsheetId,
     requestBody: {
-      requests: [{ insertText: { location: { index: 1 }, text: body } }],
+      requests: [{ addSheet: { properties: { title: tabTitle } } }],
     },
   })
+  const sheetId = batchRes.data.replies[0].addSheet.properties.sheetId
 
-  return `https://docs.google.com/document/d/${docId}`
+  // Write header + transcript lines
+  const header = [
+    [`AI Discovery Interview`],
+    [`Interviewee: ${name ?? '—'}`],
+    [`Team: ${team ?? '—'}`],
+    [`Date: ${date ?? '—'}`],
+    [],
+  ]
+  const transcriptRows = (transcript ?? '').split('\n').map(line => [line])
+  const allRows = [...header, ...transcriptRows]
+
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: `'${tabTitle}'!A1`,
+    valueInputOption: 'RAW',
+    requestBody: { values: allRows },
+  })
+
+  const tabUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit#gid=${sheetId}`
+  return tabUrl
 }
 
 export default async function handler(req, res) {
@@ -91,22 +95,18 @@ export default async function handler(req, res) {
   try {
     const auth = getAuth()
     const spreadsheetId = process.env.GOOGLE_SHEET_ID
-    const folderId      = process.env.GOOGLE_DRIVE_FOLDER_ID ?? null
     const tabName       = process.env.GOOGLE_SHEET_TAB ?? 'AI Tracker'
 
     if (!spreadsheetId) throw new Error('GOOGLE_SHEET_ID is not set')
 
     const sheets = google.sheets({ version: 'v4', auth })
-    const drive  = google.drive({ version: 'v3', auth })
-    const docs   = google.docs({ version: 'v1', auth })
 
     await ensureHeader(sheets, spreadsheetId, tabName)
     const nextId = await getNextId(sheets, spreadsheetId, tabName)
 
-    const docTitle = `AI Interview — ${name ?? 'Unknown'} — ${team ?? '—'} — ${date ?? '—'}`
-    const docUrl = await createTranscriptDoc(drive, docs, folderId, docTitle, transcript, name, team, date).catch(e => {
-      console.warn('createDoc failed:', e.message)
-      return `ERROR: ${e.message}`
+    const transcriptUrl = await createTranscriptTab(sheets, spreadsheetId, name, team, date, transcript).catch(e => {
+      console.warn('createTranscriptTab failed (non-fatal):', e.message)
+      return null
     })
 
     const sheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}`
@@ -131,7 +131,7 @@ export default async function handler(req, res) {
         uc.feasibilityScore ?? '',
         `=IFERROR(AVERAGE(L${rowNum},M${rowNum}),"")`,
         'Not started',
-        [docUrl ? `Transcript: ${docUrl}` : '', '⚠ AI-proposed scores — confirm before finalising', flagNote].filter(Boolean).join('\n'),
+        [transcriptUrl ? `Transcript: ${transcriptUrl}` : '', '⚠ AI-proposed scores — confirm before finalising', flagNote].filter(Boolean).join('\n'),
       ]
     })
 
@@ -143,7 +143,7 @@ export default async function handler(req, res) {
       requestBody: { values: rows },
     })
 
-    return res.status(200).json({ sheetUrl, docUrl, rowsAdded: rows.length })
+    return res.status(200).json({ sheetUrl, transcriptUrl, rowsAdded: rows.length })
   } catch (err) {
     console.error('Export error:', err)
     return res.status(500).json({ error: err.message ?? 'Export failed' })
