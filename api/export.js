@@ -15,7 +15,6 @@ function getAuth() {
     scopes: [
       'https://www.googleapis.com/auth/spreadsheets',
       'https://www.googleapis.com/auth/drive',
-      'https://www.googleapis.com/auth/documents',
     ],
   })
 }
@@ -46,37 +45,26 @@ async function ensureHeader(sheets, spreadsheetId, tabName) {
   }
 }
 
-async function createTranscriptDoc(docs, drive, folderId, title, transcript, name, team, date) {
-  // Create directly in Drive with native Google Doc MIME type and parent folder in one call.
-  // Doing docs.documents.create then drive.files.update(addParents) can leave the doc in a
-  // state where batchUpdate treats it as an Office file and rejects insertText.
+async function createTranscriptDoc(drive, folderId, title, transcript, name, team, date) {
+  const headerText = `AI Discovery Interview\nInterviewee: ${name ?? '—'}\nTeam: ${team ?? '—'}\nDate: ${date ?? '—'}\n\n`
+  const body = headerText + (transcript ?? '')
+
+  // Upload as text/plain with mimeType=Google Doc — Drive converts on ingest.
+  // This avoids docs.documents.batchUpdate insertText which fails on service-account-created docs.
   const fileRes = await drive.files.create({
     requestBody: {
       name: title,
       mimeType: 'application/vnd.google-apps.document',
       ...(folderId ? { parents: [folderId] } : {}),
     },
+    media: {
+      mimeType: 'text/plain',
+      body,
+    },
     fields: 'id',
   })
-  const docId = fileRes.data.id
-  const docUrl = `https://docs.google.com/document/d/${docId}`
 
-  const headerText = `AI Discovery Interview\nInterviewee: ${name ?? '—'}\nTeam: ${team ?? '—'}\nDate: ${date ?? '—'}\n\n`
-  const body = headerText + (transcript ?? '')
-
-  await docs.documents.batchUpdate({
-    documentId: docId,
-    requestBody: {
-      requests: [{
-        insertText: {
-          location: { index: 1 },
-          text: body,
-        },
-      }],
-    },
-  })
-
-  return docUrl
+  return `https://docs.google.com/document/d/${fileRes.data.id}`
 }
 
 export default async function handler(req, res) {
@@ -105,7 +93,6 @@ export default async function handler(req, res) {
     if (!spreadsheetId) throw new Error('GOOGLE_SHEET_ID is not set')
 
     const sheets = google.sheets({ version: 'v4', auth })
-    const docs   = google.docs({ version: 'v1', auth })
     const drive  = google.drive({ version: 'v3', auth })
 
     await ensureHeader(sheets, spreadsheetId, tabName)
@@ -113,7 +100,7 @@ export default async function handler(req, res) {
 
     // Create transcript doc
     const docTitle = `AI Interview — ${name ?? 'Unknown'} — ${team ?? '—'} — ${date ?? '—'}`
-    const docUrl = await createTranscriptDoc(docs, drive, folderId, docTitle, transcript, name, team, date)
+    const docUrl = await createTranscriptDoc(drive, folderId, docTitle, transcript, name, team, date)
 
     const sheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}`
     const today = date ?? new Date().toLocaleDateString('en-GB')
