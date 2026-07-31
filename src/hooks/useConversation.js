@@ -21,12 +21,8 @@ export function parseDocSections(cardContent) {
 }
 
 export function parseAiDiscoveryCard(cardContent) {
-  const sections = cardContent.split(/\n\s*-{3,}\s*\n/).map(s => s.trim()).filter(Boolean)
-
-  // Session metadata — first section
-  const metaSection = sections[0] || ''
   const getLine = (label) => {
-    const m = metaSection.match(new RegExp(`^${escapeRegex(label)}:\\s*(.+)$`, 'm'))
+    const m = cardContent.match(new RegExp(`^${escapeRegex(label)}:\\s*(.+)$`, 'm'))
     return m ? m[1].trim() : null
   }
 
@@ -34,54 +30,35 @@ export function parseAiDiscoveryCard(cardContent) {
   const team = getLine('Team')
   const date = getLine('Date')
 
-  const useCases = []
-  const flags = []
+  const topicsSectionMatch = cardContent.match(/\*\*Topics discussed\*\*\s*([\s\S]*)/)
+  const topicsText = topicsSectionMatch ? topicsSectionMatch[1] : ''
 
-  for (let i = 1; i < sections.length; i++) {
-    const section = sections[i]
+  const topicBlocks = topicsText.split(/(?=^Topic: )/m).filter(b => /^Topic: /m.test(b))
 
-    // Flag section — collect all flag lines
-    const flagMatches = [...section.matchAll(/^⚠\s*Flagged for review:\s*(.+)$/gm)]
-    if (flagMatches.length > 0) {
-      flagMatches.forEach(m => flags.push(m[1].trim()))
-      continue
-    }
+  const topics = topicBlocks.map(block => {
+    const titleMatch = block.match(/^Topic:\s*(.+)$/m)
+    const title = titleMatch ? titleMatch[1].trim() : null
 
-    // Use case section
-    const titleMatch = section.match(/^\*\*Use case:\s*(.+?)\*\*/)
-    if (!titleMatch) continue
-
-    const title = titleMatch[1].trim()
-
-    // Capture field value from "Label: ..." up to the next field label or end
     const getField = (label) => {
       const r = new RegExp(
-        `(?:^|\\n)${escapeRegex(label)}:\\s*([\\s\\S]*?)(?=\\n[A-Z][^\\n]*:|\\n⚠|$)`
+        `(?:^|\\n)${escapeRegex(label)}:\\s*([\\s\\S]*?)(?=\\n[A-Z][^\\n]*:|$)`
       )
-      const m = section.match(r)
+      const m = block.match(r)
       return m ? m[1].trim() : null
     }
 
-    // Score lines: "Impact (1–5): 4 — rationale" — handle en/em/hyphen dashes
-    const impactLine = section.match(/Impact\s*\(1[–\-—]5\):\s*(\d)\s*[—\-–]\s*(.+)/m)
-    const feasLine   = section.match(/Feasibility\s*\(1[–\-—]5\):\s*(\d)\s*[—\-–]\s*(.+)/m)
-
-    useCases.push({
+    return {
       title,
-      description:          getField('Description'),
-      currentProcess:       getField('Current process'),
-      frequency:            getField('Frequency & volume'),
-      timePerInstance:      getField('Time per instance'),
-      peopleAndSystems:     getField('People / systems involved'),
-      dataReadiness:        getField('Data readiness'),
-      impactScore:          impactLine ? parseInt(impactLine[1], 10) : null,
-      impactRationale:      impactLine ? impactLine[2].trim()        : null,
-      feasibilityScore:     feasLine   ? parseInt(feasLine[1],   10) : null,
-      feasibilityRationale: feasLine   ? feasLine[2].trim()          : null,
-    })
-  }
+      description:      getField('Description'),
+      currentProcess:   getField('Current process'),
+      frequency:        getField('Frequency & volume'),
+      timePerInstance:  getField('Time per instance'),
+      peopleAndSystems: getField('People / systems involved'),
+      dataSituation:    getField('Data situation'),
+    }
+  })
 
-  return { name, team, date, useCases, flags }
+  return { name, team, date, topics }
 }
 
 function parseCard(cardContent, mode, phase) {
