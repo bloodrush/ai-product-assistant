@@ -100,60 +100,34 @@ function PhaseRawBody({ output, color }) {
   )
 }
 
-const TRACKER_COLS = [
-  'Title', 'Description', 'Current process', 'Frequency & volume',
-  'Time per instance', 'People / systems', 'Data readiness',
-  'Impact (1-5)', 'Impact rationale', 'Feasibility (1-5)', 'Feasibility rationale',
-  'Interviewee', 'Team', 'Date',
-]
-
-function ScorePips({ score, max = 5 }) {
-  if (score == null) return null
-  return (
-    <span className="score-pips" aria-label={`${score} out of ${max}`}>
-      {Array.from({ length: max }, (_, i) => (
-        <span key={i} className={`score-pip${i < score ? ' filled' : ''}`} />
-      ))}
-    </span>
-  )
-}
-
 function AiDiscoveryPanel({ sections, isLoading, onExport, exportState }) {
   const [copied, setCopied] = useState(false)
-  const { name, team, date, useCases = [], flags = [] } = sections
+  const { name, team, date, topics = [] } = sections
 
   const copyAll = () => {
-    // Tab-separated, header + one row per use case — paste directly into a tracker sheet
-    const rows = [TRACKER_COLS.join('\t')]
-    useCases.forEach(uc => {
-      rows.push([
-        uc.title                ?? '',
-        uc.description          ?? '',
-        uc.currentProcess       ?? '',
-        uc.frequency            ?? '',
-        uc.timePerInstance      ?? '',
-        uc.peopleAndSystems     ?? '',
-        uc.dataReadiness        ?? '',
-        uc.impactScore          ?? '',
-        uc.impactRationale      ?? '',
-        uc.feasibilityScore     ?? '',
-        uc.feasibilityRationale ?? '',
-        name ?? '',
-        team ?? '',
-        date ?? '',
-      ].join('\t'))
-    })
-    if (flags.length > 0) {
-      rows.push('')
-      rows.push('Flagged for review:')
-      flags.forEach(f => rows.push(`  ${f}`))
+    const lines = []
+    if (name || team || date) {
+      if (name) lines.push(`Name: ${name}`)
+      if (team) lines.push(`Team: ${team}`)
+      if (date) lines.push(`Date: ${date}`)
+      lines.push('')
     }
-    navigator.clipboard.writeText(rows.join('\n'))
+    topics.forEach((t, i) => {
+      if (i > 0) lines.push('')
+      lines.push(`Topic: ${t.title ?? ''}`)
+      if (t.description)      lines.push(`Description: ${t.description}`)
+      if (t.currentProcess)   lines.push(`Current process: ${t.currentProcess}`)
+      if (t.frequency)        lines.push(`Frequency & volume: ${t.frequency}`)
+      if (t.timePerInstance)  lines.push(`Time per instance: ${t.timePerInstance}`)
+      if (t.peopleAndSystems) lines.push(`People / systems involved: ${t.peopleAndSystems}`)
+      if (t.dataSituation)    lines.push(`Data situation: ${t.dataSituation}`)
+    })
+    navigator.clipboard.writeText(lines.join('\n'))
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
 
-  if (useCases.length === 0) {
+  if (topics.length === 0) {
     return (
       <span className="acc-empty">
         {isLoading ? 'Interview in progress…' : 'Interview not yet complete.'}
@@ -171,18 +145,21 @@ function AiDiscoveryPanel({ sections, isLoading, onExport, exportState }) {
         </div>
       )}
 
-      {useCases.map((uc, i) => (
-        <div key={i} className="ai-use-case">
-          <span className="ai-uc-title">{uc.title}</span>
+      <div className="ai-panel-section-label">Topics discussed</div>
 
-          {uc.description && <p className="ai-uc-desc">{uc.description}</p>}
+      {topics.map((t, i) => (
+        <div key={i} className="ai-use-case">
+          <span className="ai-uc-title">{t.title}</span>
+
+          {t.description && <p className="ai-uc-desc">{t.description}</p>}
 
           <div className="ai-uc-fields">
             {[
-              ['Frequency',        uc.frequency],
-              ['Time',             uc.timePerInstance],
-              ['People / systems', uc.peopleAndSystems],
-              ['Data',             uc.dataReadiness],
+              ['Current process', t.currentProcess],
+              ['Frequency',       t.frequency],
+              ['Time',            t.timePerInstance],
+              ['People / systems', t.peopleAndSystems],
+              ['Data situation',  t.dataSituation],
             ].filter(([, v]) => v).map(([label, value]) => (
               <div key={label} className="ai-uc-field">
                 <span className="ai-uc-field-label">{label}</span>
@@ -190,41 +167,12 @@ function AiDiscoveryPanel({ sections, isLoading, onExport, exportState }) {
               </div>
             ))}
           </div>
-
-          {(uc.impactScore != null || uc.feasibilityScore != null) && (
-            <div className="ai-uc-score-block">
-              {uc.impactScore != null && (
-                <div className="ai-uc-score-row">
-                  <span className="ai-uc-score-label">Impact</span>
-                  <ScorePips score={uc.impactScore} />
-                  <span className="ai-uc-score-num">{uc.impactScore}/5</span>
-                  {uc.impactRationale && <span className="ai-uc-score-note">{uc.impactRationale}</span>}
-                </div>
-              )}
-              {uc.feasibilityScore != null && (
-                <div className="ai-uc-score-row">
-                  <span className="ai-uc-score-label">Feasibility</span>
-                  <ScorePips score={uc.feasibilityScore} />
-                  <span className="ai-uc-score-num">{uc.feasibilityScore}/5</span>
-                  {uc.feasibilityRationale && <span className="ai-uc-score-note">{uc.feasibilityRationale}</span>}
-                </div>
-              )}
-              <span className="ai-proposed-badge">⚠ AI-proposed — confirm before finalising</span>
-            </div>
-          )}
         </div>
       ))}
 
-      {flags.length > 0 && (
-        <div className="ai-panel-flags">
-          <div className="ai-panel-flags-label">⚠ Flagged for review</div>
-          {flags.map((f, i) => <p key={i} className="ai-panel-flag">{f}</p>)}
-        </div>
-      )}
-
       <div className="acc-actions">
         <button className="doc-action-btn" onClick={copyAll}>
-          {copied ? '✓ Copied' : 'Copy for tracker'}
+          {copied ? '✓ Copied' : 'Copy topics'}
         </button>
         {onExport && (
           <button
