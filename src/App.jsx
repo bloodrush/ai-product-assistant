@@ -15,6 +15,9 @@ import {
   deriveDiscoveryName,
 } from './lib/persistence.js'
 import { SAMPLE_OUTPUTS } from './lib/sampleOutputs.js'
+import { AI_DISCOVERY_OPENER } from './lib/prompts/aiDiscovery.js'
+
+const AI_OPENER_MSG = { role: 'assistant', content: AI_DISCOVERY_OPENER, _displayOnly: true }
 import './styles/main.css'
 
 const isDev = import.meta.env.DEV
@@ -43,7 +46,11 @@ function loadPrefs() {
 export default function App() {
   const [initialLoad] = useState(() => {
     migrateLegacyDiscovery()
-    return loadActiveDiscovery() ?? { item: createDiscovery(), conversation: [] }
+    const loaded = loadActiveDiscovery() ?? { item: createDiscovery(), conversation: [] }
+    if ((loaded.item.mode ?? 'product') === 'ai-discovery' && loaded.conversation.length === 0) {
+      loaded.conversation = [AI_OPENER_MSG]
+    }
+    return loaded
   })
 
   const [activePhase, setActivePhase] = useState(initialLoad.item.currentPhase)
@@ -135,8 +142,11 @@ export default function App() {
     if (!loaded) return
     createdAtRef.current    = loaded.item.createdAt
     phaseOutputsRef.current = loaded.item.phaseOutputs
+    const conv = (loaded.item.mode ?? 'product') === 'ai-discovery' && loaded.conversation.length === 0
+      ? [AI_OPENER_MSG]
+      : loaded.conversation
     reinitialize(
-      loaded.conversation,
+      conv,
       loaded.item.phaseOutputs[loaded.item.currentPhase] ?? {}
     )
     setPhaseOutputs(loaded.item.phaseOutputs)
@@ -152,13 +162,17 @@ export default function App() {
     createdAtRef.current    = newDisc.createdAt
     phaseOutputsRef.current = {}
     setPhaseOutputs({})
-    reset()
+    if (mode === 'ai-discovery') {
+      reinitialize([AI_OPENER_MSG], {})
+    } else {
+      reset()
+    }
     setActivePhase(1)
     setActiveMode(mode)
     setActiveDiscoveryId(newDisc.id)
     setDiscoveries(getAllDiscoveries())
     setExportState(null)
-  }, [reset])
+  }, [reset, reinitialize])
 
   const handleExport = useCallback(async () => {
     const { name, team, date, useCases = [], flags = [] } = docSections

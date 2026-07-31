@@ -128,7 +128,8 @@ export function useConversation(phase = 1, { onUnauthorized, initialMessages = [
     setError(null)
 
     try {
-      const assistantText = await sendMessage(updatedHistory, phase, mode)
+      const apiHistory = updatedHistory.filter(m => !m._displayOnly)
+      const assistantText = await sendMessage(apiHistory, phase, mode)
       const assistantMessage = { role: 'assistant', content: assistantText }
 
       setMessages(prev => [...prev, assistantMessage])
