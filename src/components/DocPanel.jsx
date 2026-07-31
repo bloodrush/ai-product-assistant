@@ -100,7 +100,7 @@ function PhaseRawBody({ output, color }) {
   )
 }
 
-function AiDiscoveryPanel({ sections, isLoading, onExport, exportState }) {
+function AiDiscoveryPanel({ sections, isLoading, onRetryExport, exportState }) {
   const [copied, setCopied] = useState(false)
   const { name, team, date, topics = [] } = sections
 
@@ -174,36 +174,30 @@ function AiDiscoveryPanel({ sections, isLoading, onExport, exportState }) {
         <button className="doc-action-btn" onClick={copyAll}>
           {copied ? '✓ Copied' : 'Copy topics'}
         </button>
-        {onExport && (
-          <button
-            className="doc-action-btn export-btn"
-            onClick={onExport}
-            disabled={exportState === 'loading'}
-          >
-            {exportState === 'loading'
-              ? 'Exporting…'
-              : exportState === 'done'
-                ? '✓ Exported'
-                : exportState === 'error'
-                  ? 'Retry export'
-                  : 'Export to tracker'}
-          </button>
-        )}
       </div>
-      {exportState?.sheetUrl && (
-        <div className="export-links">
-          <a href={exportState.sheetUrl} target="_blank" rel="noreferrer" className="export-link">Open sheet</a>
-          {exportState.transcriptUrl && <a href={exportState.transcriptUrl} target="_blank" rel="noreferrer" className="export-link">Open transcript</a>}
-        </div>
+
+      {exportState === 'saving' && (
+        <p className="transcript-status">Saving transcript…</p>
+      )}
+      {exportState?.docUrl && (
+        <p className="transcript-status saved">
+          Transcript saved ·{' '}
+          <a href={exportState.docUrl} target="_blank" rel="noreferrer">Open</a>
+        </p>
       )}
       {exportState?.error && (
-        <p className="export-error">{exportState.error}</p>
+        <div className="transcript-status error">
+          <span>Save failed — {exportState.error}</span>
+          {onRetryExport && (
+            <button className="transcript-retry-btn" onClick={onRetryExport}>Retry</button>
+          )}
+        </div>
       )}
     </div>
   )
 }
 
-export default function DocPanel({ sections = {}, isLoading = false, currentPhase = 1, phaseOutputs = {}, mode = 'product', onExport, exportState }) {
+export default function DocPanel({ sections = {}, isLoading = false, currentPhase = 1, phaseOutputs = {}, mode = 'product', onRetryExport, exportState }) {
   const [copied, setCopied] = useState(false)
   const [expandedDone, setExpandedDone] = useState(new Set())
 
@@ -283,7 +277,7 @@ ${bodyHtml}
           <span className="doc-panel-title">Outcome</span>
         </div>
         <div className="doc-panel-body">
-          <AiDiscoveryPanel sections={sections} isLoading={isLoading} onExport={onExport} exportState={exportState} />
+          <AiDiscoveryPanel sections={sections} isLoading={isLoading} onRetryExport={onRetryExport} exportState={exportState} />
         </div>
       </div>
     )

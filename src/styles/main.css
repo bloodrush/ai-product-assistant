@@ -1374,3 +1374,42 @@ body {
   color: #e07070;
   margin-top: 6px;
 }
+
+.transcript-status {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+.transcript-status a {
+  color: #9b7ef0;
+  text-decoration: none;
+}
+.transcript-status a:hover {
+  text-decoration: underline;
+}
+.transcript-status.saved {
+  color: #3dba7e;
+}
+.transcript-status.error {
+  color: #e07070;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.transcript-retry-btn {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #e07070;
+  background: none;
+  border: 1px solid rgba(224, 112, 112, 0.4);
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.transcript-retry-btn:hover {
+  background: rgba(224, 112, 112, 0.1);
+}

@@ -1,149 +1,103 @@
 import { google } from 'googleapis'
 
-const TRACKER_COLS = [
-  'ID', 'Date', 'Interviewee', 'Team',
-  'Use case title', 'Description', 'Current process',
-  'Frequency & volume', 'Time per instance', 'People / systems', 'Data readiness',
-  'Impact (1–5)', 'Feasibility (1–5)', 'Priority score', 'Status', 'Notes',
-]
-
 function getAuth() {
   const raw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON
   if (!raw) throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON is not set')
   return new google.auth.GoogleAuth({
     credentials: JSON.parse(raw),
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    scopes: [
+      'https://www.googleapis.com/auth/drive',
+      'https://www.googleapis.com/auth/documents',
+    ],
   })
 }
 
-async function getNextId(sheets, spreadsheetId, tabName) {
-  const res = await sheets.spreadsheets.values.get({
-    spreadsheetId,
-    range: `${tabName}!A:A`,
+async function findOrCreateFolder(drive, name, parentId) {
+  const escaped = name.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+  const res = await drive.files.list({
+    q: `name = '${escaped}' and mimeType = 'application/vnd.google-apps.folder' and '${parentId}' in parents and trashed = false`,
+    fields: 'files(id)',
+    spaces: 'drive',
   })
-  const values = res.data.values ?? []
-  return Math.max(1, values.length)
-}
+  if (res.data.files?.length > 0) return res.data.files[0].id
 
-async function ensureHeader(sheets, spreadsheetId, tabName) {
-  const res = await sheets.spreadsheets.values.get({
-    spreadsheetId,
-    range: `${tabName}!A1:P1`,
-  })
-  const existing = res.data.values?.[0] ?? []
-  if (existing.length === 0) {
-    await sheets.spreadsheets.values.update({
-      spreadsheetId,
-      range: `${tabName}!A1`,
-      valueInputOption: 'RAW',
-      requestBody: { values: [TRACKER_COLS] },
-    })
-  }
-}
-
-async function createTranscriptTab(sheets, spreadsheetId, name, team, date, transcript) {
-  const tabTitle = `T — ${name ?? 'Unknown'} — ${date ?? '—'}`.slice(0, 100)
-
-  // Add a new sheet tab
-  const batchRes = await sheets.spreadsheets.batchUpdate({
-    spreadsheetId,
+  const folder = await drive.files.create({
     requestBody: {
-      requests: [{ addSheet: { properties: { title: tabTitle } } }],
+      name,
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: [parentId],
     },
+    fields: 'id',
   })
-  const sheetId = batchRes.data.replies[0].addSheet.properties.sheetId
+  return folder.data.id
+}
 
-  // Write header + transcript lines
-  const header = [
-    [`AI Discovery Interview`],
-    [`Interviewee: ${name ?? '—'}`],
-    [`Team: ${team ?? '—'}`],
-    [`Date: ${date ?? '—'}`],
-    [],
+function buildTranscript(name, team, date, messages) {
+  const lines = [
+    'AI Discovery Interview',
+    `Interviewee: ${name ?? '—'}`,
+    `Team: ${team ?? '—'}`,
+    `Date: ${date ?? '—'}`,
+    '',
+    '---',
+    '',
   ]
-  const transcriptRows = (transcript ?? '').split('\n').map(line => [line])
-  const allRows = [...header, ...transcriptRows]
-
-  await sheets.spreadsheets.values.update({
-    spreadsheetId,
-    range: `'${tabTitle}'!A1`,
-    valueInputOption: 'RAW',
-    requestBody: { values: allRows },
+  messages.forEach(m => {
+    const label = m.role === 'assistant' ? 'Interviewer' : 'Interviewee'
+    const content = m.content
+      .replace(/<output-card>[\s\S]*?<\/output-card>/g, '[Summary card generated]')
+      .trim()
+    lines.push(`${label}:`)
+    lines.push(content)
+    lines.push('')
   })
-
-  const tabUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit#gid=${sheetId}`
-  return tabUrl
+  return lines.join('\n')
 }
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   const password = req.headers['x-shared-password']
   if (!password || password !== process.env.SHARED_PASSWORD) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
-  const { session, useCases = [], flags = [], transcript = '' } = req.body ?? {}
+  const { session, messages = [] } = req.body ?? {}
   const { name, team, date } = session ?? {}
 
-  if (useCases.length === 0) {
-    return res.status(400).json({ error: 'No use cases to export' })
-  }
+  const rootFolderId = process.env.GOOGLE_TRANSCRIPTS_FOLDER_ID
+  if (!rootFolderId) return res.status(500).json({ error: 'GOOGLE_TRANSCRIPTS_FOLDER_ID is not set' })
 
   try {
     const auth = getAuth()
-    const spreadsheetId = process.env.GOOGLE_SHEET_ID
-    const tabName       = process.env.GOOGLE_SHEET_TAB ?? 'AI Tracker'
+    const drive = google.drive({ version: 'v3', auth })
+    const docs  = google.docs({ version: 'v1', auth })
 
-    if (!spreadsheetId) throw new Error('GOOGLE_SHEET_ID is not set')
+    const teamFolderName = team?.trim() || 'Unknown Team'
+    const teamFolderId   = await findOrCreateFolder(drive, teamFolderName, rootFolderId)
 
-    const sheets = google.sheets({ version: 'v4', auth })
+    const docTitle = `AI Interview — ${name ?? 'Unknown'} — ${team ?? 'Unknown'} — ${date ?? new Date().toLocaleDateString('en-GB')}`
 
-    await ensureHeader(sheets, spreadsheetId, tabName)
-    const nextId = await getNextId(sheets, spreadsheetId, tabName)
+    const fileRes = await drive.files.create({
+      requestBody: {
+        name: docTitle,
+        mimeType: 'application/vnd.google-apps.document',
+        parents: [teamFolderId],
+      },
+      fields: 'id',
+    })
+    const docId = fileRes.data.id
 
-    const transcriptUrl = await createTranscriptTab(sheets, spreadsheetId, name, team, date, transcript).catch(e => {
-      console.warn('createTranscriptTab failed (non-fatal):', e.message)
-      return null
+    const transcript = buildTranscript(name, team, date, messages)
+    await docs.documents.batchUpdate({
+      documentId: docId,
+      requestBody: {
+        requests: [{ insertText: { location: { index: 1 }, text: transcript } }],
+      },
     })
 
-    const sheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}`
-    const today = date ?? new Date().toLocaleDateString('en-GB')
-    const flagNote = flags.length > 0 ? `Flagged: ${flags.join('; ')}` : ''
-
-    const rows = useCases.map((uc, idx) => {
-      const rowNum = nextId + idx + 1
-      return [
-        nextId + idx,
-        today,
-        name ?? '',
-        team ?? '',
-        uc.title ?? '',
-        uc.description ?? '',
-        uc.currentProcess ?? '',
-        uc.frequency ?? '',
-        uc.timePerInstance ?? '',
-        uc.peopleAndSystems ?? '',
-        uc.dataReadiness ?? '',
-        uc.impactScore ?? '',
-        uc.feasibilityScore ?? '',
-        `=IFERROR(AVERAGE(L${rowNum},M${rowNum}),"")`,
-        'Not started',
-        [transcriptUrl ? `Transcript: ${transcriptUrl}` : '', '⚠ AI-proposed scores — confirm before finalising', flagNote].filter(Boolean).join('\n'),
-      ]
-    })
-
-    await sheets.spreadsheets.values.append({
-      spreadsheetId,
-      range: `${tabName}!A:P`,
-      valueInputOption: 'USER_ENTERED',
-      insertDataOption: 'INSERT_ROWS',
-      requestBody: { values: rows },
-    })
-
-    return res.status(200).json({ sheetUrl, transcriptUrl, rowsAdded: rows.length })
+    const docUrl = `https://docs.google.com/document/d/${docId}/edit`
+    return res.status(200).json({ docUrl })
   } catch (err) {
     console.error('Export error:', err)
     return res.status(500).json({ error: err.message ?? 'Export failed' })

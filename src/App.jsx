@@ -134,6 +134,38 @@ export default function App() {
   }, [messages, isLoading, sendUserMessage])
 
   const [exportState, setExportState] = useState(null)
+  const autoSaveTriggeredRef = useRef(false)
+
+  const doTranscriptSave = useCallback((sessionMeta, msgs) => {
+    setExportState('saving')
+    fetch('/api/export', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-shared-password': sessionStorage.getItem('sharedPassword') ?? '',
+      },
+      body: JSON.stringify({ session: sessionMeta, messages: msgs }),
+    })
+      .then(r => r.json().then(d => ({ ok: r.ok, d })))
+      .then(({ ok, d }) => {
+        if (!ok) throw new Error(d.error ?? 'Save failed')
+        setExportState({ docUrl: d.docUrl })
+      })
+      .catch(err => setExportState({ error: err.message }))
+  }, [])
+
+  // Auto-save transcript when the interview output card is received
+  useEffect(() => {
+    if (activeMode !== 'ai-discovery' || !phaseOutputReceived || autoSaveTriggeredRef.current) return
+    autoSaveTriggeredRef.current = true
+    const { name, team, date } = docSections
+    doTranscriptSave({ name, team, date }, messages.filter(m => !m._displayOnly))
+  }, [phaseOutputReceived, activeMode]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleRetryExport = useCallback(() => {
+    const { name, team, date } = docSections
+    doTranscriptSave({ name, team, date }, messages.filter(m => !m._displayOnly))
+  }, [docSections, messages, doTranscriptSave])
 
   const handleSwitchDiscovery = useCallback((id) => {
     if (id === activeDiscoveryId) return
@@ -154,6 +186,7 @@ export default function App() {
     setActiveMode(loaded.item.mode ?? 'product')
     setActiveDiscoveryId(id)
     setDiscoveries(getAllDiscoveries())
+    autoSaveTriggeredRef.current = false
     setExportState(null)
   }, [activeDiscoveryId, reinitialize])
 
@@ -171,35 +204,9 @@ export default function App() {
     setActiveMode(mode)
     setActiveDiscoveryId(newDisc.id)
     setDiscoveries(getAllDiscoveries())
+    autoSaveTriggeredRef.current = false
     setExportState(null)
   }, [reset, reinitialize])
-
-  const handleExport = useCallback(async () => {
-    const { name, team, date, useCases = [], flags = [] } = docSections
-    if (useCases.length === 0) return
-
-    const transcript = messages
-      .filter(m => m.role === 'assistant')
-      .map(m => m.content)
-      .join('\n\n---\n\n')
-
-    setExportState('loading')
-    try {
-      const res = await fetch('/api/export', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-shared-password': sessionStorage.getItem('sharedPassword') ?? '',
-        },
-        body: JSON.stringify({ session: { name, team, date }, useCases, flags, transcript }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Export failed')
-      setExportState({ sheetUrl: data.sheetUrl, transcriptUrl: data.transcriptUrl })
-    } catch (err) {
-      setExportState({ error: err.message })
-    }
-  }, [docSections, messages])
 
   const [prefs, setPrefs] = useState(loadPrefs)
 
@@ -257,7 +264,7 @@ export default function App() {
         currentPhase={activePhase}
         phaseOutputs={phaseOutputs}
         mode={activeMode}
-        onExport={activeMode === 'ai-discovery' ? handleExport : undefined}
+        onRetryExport={activeMode === 'ai-discovery' ? handleRetryExport : undefined}
         exportState={exportState}
       />
 
