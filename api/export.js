@@ -44,6 +44,8 @@ export default async function handler(req, res) {
   const { session, messages = [] } = req.body ?? {}
   const { name, team, date } = session ?? {}
 
+  console.log('export called — name:', name, 'team:', team, 'msgCount:', messages.length)
+
   const docId = process.env.GOOGLE_TRANSCRIPT_DOC_ID
   if (!docId) return res.status(500).json({ error: 'GOOGLE_TRANSCRIPT_DOC_ID is not set' })
 
