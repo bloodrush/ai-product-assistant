@@ -134,7 +134,6 @@ export default function App() {
   }, [messages, isLoading, sendUserMessage])
 
   const [exportState, setExportState] = useState(null)
-  const autoSaveTriggeredRef = useRef(false)
 
   const doTranscriptSave = useCallback((sessionMeta, msgs) => {
     setExportState('saving')
@@ -154,13 +153,17 @@ export default function App() {
       .catch(err => setExportState({ error: err.message }))
   }, [])
 
-  // Auto-save transcript when the interview output card is received
+  // Auto-save transcript once per discovery when the output card is received.
+  // Uses localStorage (survives HMR remounts) keyed by discovery ID.
   useEffect(() => {
-    if (activeMode !== 'ai-discovery' || !phaseOutputReceived || autoSaveTriggeredRef.current) return
-    autoSaveTriggeredRef.current = true
-    const { name, team, date } = docSections
+    if (activeMode !== 'ai-discovery' || !phaseOutputReceived) return
+    const savedKey = `transcript_saved_${activeDiscoveryId}`
+    if (localStorage.getItem(savedKey)) return
+    const { name, team, date, topics } = docSections
+    if (!topics?.length) return   // card not yet parsed into docSections
+    localStorage.setItem(savedKey, '1')
     doTranscriptSave({ name, team, date }, messages.filter(m => !m._displayOnly))
-  }, [phaseOutputReceived, activeMode]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [phaseOutputReceived, activeMode, activeDiscoveryId, docSections]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleRetryExport = useCallback(() => {
     const { name, team, date } = docSections
@@ -186,7 +189,6 @@ export default function App() {
     setActiveMode(loaded.item.mode ?? 'product')
     setActiveDiscoveryId(id)
     setDiscoveries(getAllDiscoveries())
-    autoSaveTriggeredRef.current = false
     setExportState(null)
   }, [activeDiscoveryId, reinitialize])
 
@@ -204,7 +206,6 @@ export default function App() {
     setActiveMode(mode)
     setActiveDiscoveryId(newDisc.id)
     setDiscoveries(getAllDiscoveries())
-    autoSaveTriggeredRef.current = false
     setExportState(null)
   }, [reset, reinitialize])
 
