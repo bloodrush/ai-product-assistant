@@ -153,17 +153,23 @@ export default function App() {
       .catch(err => setExportState({ error: err.message }))
   }, [])
 
+  // Ref so the effect can read current docSections/messages without them being deps.
+  const docSectionsRef = useRef(docSections)
+  const messagesRef = useRef(messages)
+  useEffect(() => { docSectionsRef.current = docSections }, [docSections])
+  useEffect(() => { messagesRef.current = messages }, [messages])
+
   // Auto-save transcript once per discovery when the output card is received.
-  // Uses localStorage (survives HMR remounts) keyed by discovery ID.
+  // Keyed by discovery ID in localStorage so it survives page reloads and HMR.
   useEffect(() => {
     if (activeMode !== 'ai-discovery' || !phaseOutputReceived) return
     const savedKey = `transcript_saved_${activeDiscoveryId}`
     if (localStorage.getItem(savedKey)) return
-    const { name, team, date, topics } = docSections
-    if (!topics?.length) return   // card not yet parsed into docSections
+    const { name, team, date, topics } = docSectionsRef.current
+    if (!topics?.length) return   // output card not yet in docSections
     localStorage.setItem(savedKey, '1')
-    doTranscriptSave({ name, team, date }, messages.filter(m => !m._displayOnly))
-  }, [phaseOutputReceived, activeMode, activeDiscoveryId, docSections]) // eslint-disable-line react-hooks/exhaustive-deps
+    doTranscriptSave({ name, team, date }, messagesRef.current.filter(m => !m._displayOnly))
+  }, [phaseOutputReceived, activeMode, activeDiscoveryId, doTranscriptSave])
 
   const handleRetryExport = useCallback(() => {
     const { name, team, date } = docSections
