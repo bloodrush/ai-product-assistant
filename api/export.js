@@ -5,31 +5,8 @@ function getAuth() {
   if (!raw) throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON is not set')
   return new google.auth.GoogleAuth({
     credentials: JSON.parse(raw),
-    scopes: [
-      'https://www.googleapis.com/auth/drive',
-      'https://www.googleapis.com/auth/documents',
-    ],
+    scopes: ['https://www.googleapis.com/auth/documents'],
   })
-}
-
-async function findOrCreateFolder(drive, name, parentId) {
-  const escaped = name.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
-  const res = await drive.files.list({
-    q: `name = '${escaped}' and mimeType = 'application/vnd.google-apps.folder' and '${parentId}' in parents and trashed = false`,
-    fields: 'files(id)',
-    spaces: 'drive',
-  })
-  if (res.data.files?.length > 0) return res.data.files[0].id
-
-  const folder = await drive.files.create({
-    requestBody: {
-      name,
-      mimeType: 'application/vnd.google-apps.folder',
-      parents: [parentId],
-    },
-    fields: 'id',
-  })
-  return folder.data.id
 }
 
 function buildTranscript(name, team, date, messages) {
@@ -38,8 +15,6 @@ function buildTranscript(name, team, date, messages) {
     `Interviewee: ${name ?? '—'}`,
     `Team: ${team ?? '—'}`,
     `Date: ${date ?? '—'}`,
-    '',
-    '---',
     '',
   ]
   messages.forEach(m => {
@@ -54,6 +29,10 @@ function buildTranscript(name, team, date, messages) {
   return lines.join('\n')
 }
 
+// Unique divider that separates the Sessions index from the Transcripts section.
+// Uses box-drawing chars so it won't appear in normal interview text.
+const DIVIDER = '════════════════════════════════════════'
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
@@ -65,39 +44,67 @@ export default async function handler(req, res) {
   const { session, messages = [] } = req.body ?? {}
   const { name, team, date } = session ?? {}
 
-  const rootFolderId = process.env.GOOGLE_TRANSCRIPTS_FOLDER_ID
-  if (!rootFolderId) return res.status(500).json({ error: 'GOOGLE_TRANSCRIPTS_FOLDER_ID is not set' })
+  const docId = process.env.GOOGLE_TRANSCRIPT_DOC_ID
+  if (!docId) return res.status(500).json({ error: 'GOOGLE_TRANSCRIPT_DOC_ID is not set' })
 
   try {
     const auth = getAuth()
-    const drive = google.drive({ version: 'v3', auth })
-    const docs  = google.docs({ version: 'v1', auth })
+    const docs = google.docs({ version: 'v1', auth })
 
-    const teamFolderName = team?.trim() || 'Unknown Team'
-    const teamFolderId   = await findOrCreateFolder(drive, teamFolderName, rootFolderId)
+    const { data } = await docs.documents.get({ documentId: docId })
+    const bodyContent = data.body?.content ?? []
 
-    const docTitle = `AI Interview — ${name ?? 'Unknown'} — ${team ?? 'Unknown'} — ${date ?? new Date().toLocaleDateString('en-GB')}`
-
-    const fileRes = await drive.files.create({
-      requestBody: {
-        name: docTitle,
-        mimeType: 'application/vnd.google-apps.document',
-        parents: [teamFolderId],
-      },
-      fields: 'id',
-    })
-    const docId = fileRes.data.id
-
+    const displayDate = date ?? new Date().toLocaleDateString('en-GB')
+    const tocEntry = `• ${name ?? '—'} — ${team ?? '—'} — ${displayDate}\n`
     const transcript = buildTranscript(name, team, date, messages)
-    await docs.documents.batchUpdate({
-      documentId: docId,
-      requestBody: {
-        requests: [{ insertText: { location: { index: 1 }, text: transcript } }],
-      },
-    })
 
-    const docUrl = `https://docs.google.com/document/d/${docId}/edit`
-    return res.status(200).json({ docUrl })
+    // Concatenate all text to check if the doc is effectively empty.
+    const docText = bodyContent
+      .flatMap(el => (el.paragraph?.elements ?? []).map(pe => pe.textRun?.content ?? ''))
+      .join('')
+
+    // endIndex of the last structural element (always a trailing \n in Docs).
+    const lastEndIndex = bodyContent[bodyContent.length - 1]?.endIndex ?? 2
+
+    let requests
+
+    if (docText.trim() === '') {
+      // Fresh doc — write the initial structure in one shot.
+      const initText = `Sessions\n\n${tocEntry}\n${DIVIDER}\n\nTranscripts\n\n${transcript}\n`
+      requests = [{ insertText: { location: { index: 1 }, text: initText } }]
+    } else {
+      // Find the divider paragraph to know where the Sessions section ends.
+      let dividerStartIndex = null
+      for (const el of bodyContent) {
+        if (!el.paragraph) continue
+        const paraText = (el.paragraph.elements ?? [])
+          .map(pe => pe.textRun?.content ?? '')
+          .join('')
+        if (paraText.trimEnd() === DIVIDER) {
+          dividerStartIndex = el.startIndex
+          break
+        }
+      }
+
+      if (dividerStartIndex == null) {
+        // Divider missing — fall back to appending at the end.
+        requests = [{
+          insertText: { location: { index: lastEndIndex - 1 }, text: `\n${transcript}\n` },
+        }]
+      } else {
+        // Apply highest-index insertion first so lower indices stay valid.
+        // 1. Append transcript before the document's trailing newline.
+        // 2. Insert TOC entry right before the divider (inside Sessions section).
+        requests = [
+          { insertText: { location: { index: lastEndIndex - 1 }, text: `\n${transcript}\n` } },
+          { insertText: { location: { index: dividerStartIndex }, text: tocEntry } },
+        ]
+      }
+    }
+
+    await docs.documents.batchUpdate({ documentId: docId, requestBody: { requests } })
+
+    return res.status(200).json({ docUrl: `https://docs.google.com/document/d/${docId}/edit` })
   } catch (err) {
     console.error('Export error:', err)
     return res.status(500).json({ error: err.message ?? 'Export failed' })
