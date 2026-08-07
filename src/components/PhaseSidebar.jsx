@@ -71,6 +71,9 @@ export default function PhaseSidebar({
                 onClick={() => { setPickerOpen(false); onSwitchDiscovery(d.id) }}
               >
                 <span className="discovery-item-name">{d.name}</span>
+                {d.mode === 'ai-discovery' && d.team && (
+                  <span className="discovery-item-team">{d.team}</span>
+                )}
                 <span className="discovery-item-meta">
                   <span className={`discovery-item-phase${d.mode === 'ai-discovery' ? ' ai-mode' : ''}`}>
                     {d.mode === 'ai-discovery' ? 'AI' : `P${d.currentPhase}`}

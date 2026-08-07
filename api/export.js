@@ -9,24 +9,47 @@ function getAuth() {
   })
 }
 
-function buildTranscript(name, team, date, messages) {
-  const lines = [
-    'AI Discovery Interview',
-    `Interviewee: ${name ?? '—'}`,
-    `Team: ${team ?? '—'}`,
-    `Date: ${date ?? '—'}`,
-    '',
-  ]
+// Returns { text, boldRanges } where boldRanges are [startOffset, endOffset] pairs
+// (endOffset is exclusive, matching the Docs API convention).
+function buildTranscriptData(name, team, date, messages) {
+  const segments = []
+  const add = (text, bold = false) => segments.push({ text, bold })
+
+  add('AI Discovery Interview\n', true)
+  add(`Interviewee: ${name ?? '—'}\n`)
+  add(`Team: ${team ?? '—'}\n`)
+  add(`Date: ${date ?? '—'}\n`)
+  add('\n')
+
   messages.forEach(m => {
     const label = m.role === 'assistant' ? 'Interviewer' : 'Interviewee'
     const content = m.content
       .replace(/<output-card>[\s\S]*?<\/output-card>/g, '[Summary card generated]')
       .trim()
-    lines.push(`${label}:`)
-    lines.push(content)
-    lines.push('')
+    add(`${label}:\n`, true)
+    add(`${content}\n\n`)
   })
-  return lines.join('\n')
+
+  let text = ''
+  const boldRanges = []
+  for (const seg of segments) {
+    const start = text.length
+    text += seg.text
+    // Bold range excludes the trailing \n so only the label text is bolded.
+    if (seg.bold) boldRanges.push([start, text.length - 1])
+  }
+
+  return { text, boldRanges }
+}
+
+function makeBoldRequests(baseDocIndex, boldRanges) {
+  return boldRanges.map(([start, end]) => ({
+    updateTextStyle: {
+      range: { startIndex: baseDocIndex + start, endIndex: baseDocIndex + end },
+      textStyle: { bold: true },
+      fields: 'bold',
+    },
+  }))
 }
 
 // Unique divider that separates the Sessions index from the Transcripts section.
@@ -58,7 +81,7 @@ export default async function handler(req, res) {
 
     const displayDate = date ?? new Date().toLocaleDateString('en-GB')
     const tocEntry = `• ${name ?? '—'} — ${team ?? '—'} — ${displayDate}\n`
-    const transcript = buildTranscript(name, team, date, messages)
+    const { text: transcript, boldRanges } = buildTranscriptData(name, team, date, messages)
 
     // Concatenate all text to check if the doc is effectively empty.
     const docText = bodyContent
@@ -72,8 +95,14 @@ export default async function handler(req, res) {
 
     if (docText.trim() === '') {
       // Fresh doc — write the initial structure in one shot.
-      const initText = `Sessions\n\n${tocEntry}\n${DIVIDER}\n\nTranscripts\n\n${transcript}\n`
-      requests = [{ insertText: { location: { index: 1 }, text: initText } }]
+      const prefix = `Sessions\n\n${tocEntry}\n${DIVIDER}\n\nTranscripts\n\n`
+      const initText = prefix + transcript + '\n'
+      // Transcript starts at index 1 + prefix.length after insertion.
+      const transcriptDocStart = 1 + prefix.length
+      requests = [
+        { insertText: { location: { index: 1 }, text: initText } },
+        ...makeBoldRequests(transcriptDocStart, boldRanges),
+      ]
     } else {
       // Find the divider paragraph to know where the Sessions section ends.
       let dividerStartIndex = null
@@ -90,16 +119,23 @@ export default async function handler(req, res) {
 
       if (dividerStartIndex == null) {
         // Divider missing — fall back to appending at the end.
-        requests = [{
-          insertText: { location: { index: lastEndIndex - 1 }, text: `\n${transcript}\n` },
-        }]
+        // The prepended \n lands at lastEndIndex - 1; transcript follows at lastEndIndex.
+        const transcriptDocStart = lastEndIndex
+        requests = [
+          { insertText: { location: { index: lastEndIndex - 1 }, text: `\n${transcript}\n` } },
+          ...makeBoldRequests(transcriptDocStart, boldRanges),
+        ]
       } else {
         // Apply highest-index insertion first so lower indices stay valid.
         // 1. Append transcript before the document's trailing newline.
         // 2. Insert TOC entry right before the divider (inside Sessions section).
+        // After both insertions the transcript sits at lastEndIndex + tocEntry.length
+        // because the TOC insertion (at dividerStartIndex < lastEndIndex) shifts it right.
+        const transcriptDocStart = lastEndIndex + tocEntry.length
         requests = [
           { insertText: { location: { index: lastEndIndex - 1 }, text: `\n${transcript}\n` } },
           { insertText: { location: { index: dividerStartIndex }, text: tocEntry } },
+          ...makeBoldRequests(transcriptDocStart, boldRanges),
         ]
       }
     }

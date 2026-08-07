@@ -36,7 +36,7 @@ function loadRegistry() {
     if (!raw) return { version: 2, activeId: null, items: [] }
     const parsed = JSON.parse(raw)
     if (parsed?.version !== 2) return { version: 2, activeId: null, items: [] }
-    parsed.items = parsed.items.map(item => ({ mode: 'product', ...item }))
+    parsed.items = parsed.items.map(item => ({ mode: 'product', team: null, ...item }))
     return parsed
   } catch { return { version: 2, activeId: null, items: [] } }
 }
@@ -127,6 +127,7 @@ export function createDiscovery({ mode = 'product' } = {}) {
     createdAt: now,
     updatedAt: now,
     mode,
+    team: null,
     currentPhase: 1,
     phaseOutputs: {},
   }
@@ -179,7 +180,7 @@ export function loadActiveDiscovery() {
  * @param {string} id
  * @param {{ currentPhase: number, conversation: Array, phaseOutputs: Record<number, object>, name?: string }} state
  */
-export function saveDiscovery(id, { currentPhase, conversation, phaseOutputs, name }) {
+export function saveDiscovery(id, { currentPhase, conversation, phaseOutputs, name, team }) {
   try {
     const reg = loadRegistry()
     const idx = reg.items.findIndex(d => d.id === id)
@@ -190,6 +191,7 @@ export function saveDiscovery(id, { currentPhase, conversation, phaseOutputs, na
       phaseOutputs,
       updatedAt: new Date().toISOString(),
       ...(name ? { name, nameSource: 'phase1' } : {}),
+      ...(team != null ? { team } : {}),
     }
     saveRegistry(reg)
     localStorage.setItem(CONV_KEY, JSON.stringify({ discoveryId: id, conversation }))

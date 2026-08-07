@@ -98,11 +98,16 @@ export default function App() {
     const derivedName = (problemText && currentItem?.nameSource === 'date')
       ? deriveDiscoveryName(problemText) : undefined
 
+    const team = activeMode === 'ai-discovery'
+      ? (phaseOutputsRef.current[1]?.team ?? null)
+      : undefined
+
     saveDiscovery(activeDiscoveryId, {
       currentPhase: activePhase,
       conversation: messages,
       phaseOutputs: phaseOutputsRef.current,
       name: derivedName,
+      team,
     })
     if (derivedName) setDiscoveries(getAllDiscoveries())
   }, [messages, isLoading, docSections, activePhase, activeDiscoveryId])
