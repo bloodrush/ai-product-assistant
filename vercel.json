@@ -7,8 +7,5 @@
     "api/export.js": { "maxDuration": 30 },
     "api/aggregate.js": { "maxDuration": 60 },
     "api/tracker-export.js": { "maxDuration": 30 }
-  },
-  "rewrites": [
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
-  ]
+  }
 }
