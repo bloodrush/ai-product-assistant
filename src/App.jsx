@@ -200,9 +200,13 @@ export default function App() {
       },
       body: JSON.stringify({ session: sessionMeta, messages: msgs }),
     })
-      .then(r => r.json().then(d => ({ ok: r.ok, d })))
+      .then(async r => {
+        let d = {}
+        try { d = await r.json() } catch {}
+        return { ok: r.ok, d }
+      })
       .then(({ ok, d }) => {
-        if (!ok) throw new Error(d.error ?? 'Save failed')
+        if (!ok) throw new Error(d.error ?? 'Export failed — run vercel dev to test the full save path')
         setExportState({ docUrl: d.docUrl })
       })
       .catch(err => setExportState({ error: err.message }))
