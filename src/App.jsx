@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import PhaseSidebar from './components/PhaseSidebar.jsx'
 import ChatWindow from './components/ChatWindow.jsx'
 import ChatInput from './components/ChatInput.jsx'
 import DocPanel from './components/DocPanel.jsx'
+import TeamSummaryView from './components/TeamSummaryView.jsx'
 import PasswordGate from './components/PasswordGate.jsx'
 import { useConversation } from './hooks/useConversation.js'
 import {
@@ -140,6 +141,51 @@ export default function App() {
 
   const [exportState, setExportState] = useState(null)
 
+  const aiTeams = useMemo(() => {
+    const counts = {}
+    discoveries.forEach(d => {
+      if (d.mode === 'ai-discovery' && d.team) {
+        counts[d.team] = (counts[d.team] ?? 0) + 1
+      }
+    })
+    return Object.entries(counts).map(([name, count]) => ({ name, count }))
+  }, [discoveries])
+
+  const [teamSummaryState, setTeamSummaryState] = useState(null)
+
+  const handleAggregateTeam = useCallback(async (team) => {
+    setTeamSummaryState({ phase: 'loading', team })
+    try {
+      const r = await fetch('/api/aggregate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-shared-password': sessionStorage.getItem('sharedPassword') ?? '',
+        },
+        body: JSON.stringify({ team }),
+      })
+      const data = await r.json()
+      if (!r.ok) throw new Error(data.error ?? 'Aggregation failed')
+      setTeamSummaryState({ phase: 'done', team, data })
+    } catch (err) {
+      setTeamSummaryState({ phase: 'error', team, error: err.message })
+    }
+  }, [])
+
+  const handleExportToTracker = useCallback(async (summaryData) => {
+    const r = await fetch('/api/tracker-export', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-shared-password': sessionStorage.getItem('sharedPassword') ?? '',
+      },
+      body: JSON.stringify(summaryData),
+    })
+    const data = await r.json()
+    if (!r.ok) throw new Error(data.error ?? 'Export failed')
+    return data
+  }, [])
+
   const doTranscriptSave = useCallback((sessionMeta, msgs) => {
     setExportState('saving')
     fetch('/api/export', {
@@ -204,6 +250,7 @@ export default function App() {
   }, [activeDiscoveryId, reinitialize])
 
   const handleStartNew = useCallback((mode = 'product') => {
+    setTeamSummaryState(null)
     const newDisc = createDiscovery({ mode })
     createdAtRef.current    = newDisc.createdAt
     phaseOutputsRef.current = {}
@@ -250,35 +297,49 @@ export default function App() {
         activeDiscoveryId={activeDiscoveryId}
         onSwitchDiscovery={handleSwitchDiscovery}
         onStartNew={handleStartNew}
+        aiTeams={aiTeams}
+        teamSummaryState={teamSummaryState}
+        onSummarizeTeam={handleAggregateTeam}
+        onBackFromSummary={() => setTeamSummaryState(null)}
       />
 
-      <div className="chat-col">
-        <main className="main">
-          <ChatWindow
-            messages={messages}
+      {teamSummaryState ? (
+        <TeamSummaryView
+          state={teamSummaryState}
+          onBack={() => setTeamSummaryState(null)}
+          onExportToTracker={handleExportToTracker}
+        />
+      ) : (
+        <>
+          <div className="chat-col">
+            <main className="main">
+              <ChatWindow
+                messages={messages}
+                isLoading={isLoading}
+                error={error}
+                phase={activePhase}
+                mode={activeMode}
+                showAdvanceButton={phaseOutputReceived && activePhase < 5}
+                onAdvancePhase={handleAdvancePhase}
+                onInjectSampleOutput={isDev && !phaseOutputReceived ? handleInjectSampleOutput : undefined}
+              />
+            </main>
+            <footer className="footer">
+              <ChatInput onSend={sendUserMessage} isLoading={isLoading} phaseComplete={phaseOutputReceived && activePhase < 5} />
+            </footer>
+          </div>
+
+          <DocPanel
+            sections={docSections}
             isLoading={isLoading}
-            error={error}
-            phase={activePhase}
+            currentPhase={activePhase}
+            phaseOutputs={phaseOutputs}
             mode={activeMode}
-            showAdvanceButton={phaseOutputReceived && activePhase < 5}
-            onAdvancePhase={handleAdvancePhase}
-            onInjectSampleOutput={isDev && !phaseOutputReceived ? handleInjectSampleOutput : undefined}
+            onRetryExport={activeMode === 'ai-discovery' ? handleRetryExport : undefined}
+            exportState={exportState}
           />
-        </main>
-        <footer className="footer">
-          <ChatInput onSend={sendUserMessage} isLoading={isLoading} phaseComplete={phaseOutputReceived && activePhase < 5} />
-        </footer>
-      </div>
-
-      <DocPanel
-        sections={docSections}
-        isLoading={isLoading}
-        currentPhase={activePhase}
-        phaseOutputs={phaseOutputs}
-        mode={activeMode}
-        onRetryExport={activeMode === 'ai-discovery' ? handleRetryExport : undefined}
-        exportState={exportState}
-      />
+        </>
+      )}
 
     </div>
   )

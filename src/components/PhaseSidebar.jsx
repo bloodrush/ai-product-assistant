@@ -16,6 +16,10 @@ export default function PhaseSidebar({
   discoveries = [],
   activeDiscoveryId,
   onSwitchDiscovery,
+  aiTeams = [],
+  teamSummaryState,
+  onSummarizeTeam,
+  onBackFromSummary,
 }) {
   const [pickerOpen, setPickerOpen] = useState(false)
 
@@ -83,6 +87,32 @@ export default function PhaseSidebar({
               </button>
             ))}
           </div>
+
+          {aiTeams.length > 0 && (
+            <div className="sidebar-teams">
+              <div className="sidebar-teams-label">Teams</div>
+              {aiTeams.map(({ name, count }) => {
+                const isActive = teamSummaryState?.team === name
+                const isLoading = isActive && teamSummaryState?.phase === 'loading'
+                return (
+                  <button
+                    key={name}
+                    className={`team-summary-btn${isActive ? ' active' : ''}`}
+                    onClick={() => isActive ? onBackFromSummary() : onSummarizeTeam(name)}
+                    disabled={!isActive && teamSummaryState?.phase === 'loading'}
+                  >
+                    <span className="team-summary-btn-name">{name}</span>
+                    <span className="team-summary-btn-right">
+                      <span className="team-summary-btn-count">{count}</span>
+                      <span className="team-summary-btn-action">
+                        {isLoading ? '…' : isActive ? '×' : '↗'}
+                      </span>
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
 
           <div className="sidebar-settings">
             <div className="settings-label">Theme</div>
