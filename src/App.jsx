@@ -168,8 +168,9 @@ export default function App() {
         },
         body: JSON.stringify({ team }),
       })
-      const data = await r.json()
-      if (!r.ok) throw new Error(data.error ?? 'Aggregation failed')
+      let data = {}
+      try { data = await r.json() } catch {}
+      if (!r.ok) throw new Error(data.error ?? 'Aggregation failed — run vercel dev to test')
       setTeamSummaryState({ phase: 'done', team, data })
     } catch (err) {
       setTeamSummaryState({ phase: 'error', team, error: err.message })
@@ -185,8 +186,9 @@ export default function App() {
       },
       body: JSON.stringify(summaryData),
     })
-    const data = await r.json()
-    if (!r.ok) throw new Error(data.error ?? 'Export failed')
+    let data = {}
+    try { data = await r.json() } catch {}
+    if (!r.ok) throw new Error(data.error ?? 'Export failed — run vercel dev to test')
     return data
   }, [])
 
