@@ -240,6 +240,7 @@ export default function DocPanel({ sections = {}, isLoading = false, currentPhas
     }).join('')
     const date = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
     const win = window.open('', '_blank')
+    if (!win) return
     win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
 <title>Phase ${currentPhase} — Discovery Document</title>
 <style>

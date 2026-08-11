@@ -8,10 +8,9 @@ const MODEL = process.env.APP_ENV === 'production'
 function getAuth() {
   const raw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON
   if (!raw) throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON is not set')
-  return new google.auth.GoogleAuth({
-    credentials: JSON.parse(raw),
-    scopes: ['https://www.googleapis.com/auth/documents.readonly'],
-  })
+  let credentials
+  try { credentials = JSON.parse(raw) } catch { throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON is not valid JSON') }
+  return new google.auth.GoogleAuth({ credentials, scopes: ['https://www.googleapis.com/auth/documents.readonly'] })
 }
 
 function extractTranscriptsForTeam(bodyContent, targetTeam) {
@@ -213,8 +212,14 @@ export default async function handler(req, res) {
     const text = aiData?.content?.[0]?.text
     if (!text) return res.status(502).json({ error: 'Empty response from model' })
 
-    // Strip markdown fences if model adds them despite instructions
-    const cleaned = text.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '').trim()
+    // Extract the JSON object even if the model wraps it in prose or fences
+    const start = text.indexOf('{')
+    const end = text.lastIndexOf('}')
+    if (start === -1 || end === -1) {
+      console.error('Model response contains no JSON object:', text.slice(0, 200))
+      return res.status(502).json({ error: 'Model returned invalid JSON' })
+    }
+    const cleaned = text.slice(start, end + 1)
 
     let parsed
     try {

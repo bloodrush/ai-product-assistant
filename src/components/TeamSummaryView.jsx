@@ -141,8 +141,8 @@ export default function TeamSummaryView({ state, onBack, onExportToTracker }) {
                   Use cases
                   <span className="ts-count">{d.useCases.length}</span>
                 </div>
-                {d.useCases.map((uc) => (
-                  <UseCaseCard key={uc.title} uc={uc} />
+                {d.useCases.map((uc, i) => (
+                  <UseCaseCard key={i} uc={uc} />
                 ))}
               </div>
             )}
