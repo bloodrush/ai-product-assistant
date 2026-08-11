@@ -191,6 +191,7 @@ export default function App() {
   }, [])
 
   const doTranscriptSave = useCallback((sessionMeta, msgs) => {
+    if (isDev) { setExportState({ docUrl: null }); return }
     setExportState('saving')
     fetch('/api/export', {
       method: 'POST',

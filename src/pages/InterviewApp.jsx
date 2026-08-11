@@ -40,6 +40,7 @@ export default function InterviewApp() {
     const { name, team, date, topics } = docSectionsRef.current
     if (!topics?.length) return
     savedRef.current = true
+    if (isDev) { setDone(true); return }
     setExportState('saving')
 
     fetch('/api/export', {
