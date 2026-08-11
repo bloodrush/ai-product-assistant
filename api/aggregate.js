@@ -65,12 +65,88 @@ Rules:
 - flags: sensitive topics appearing across interviews (PII, compliance, third-party data restrictions)
 - summary: narrative synthesizing the team's biggest pain points and top AI opportunities`
 
+const DEV_SAMPLE_RESPONSE = (team) => ({
+  team,
+  interviewCount: 3,
+  generatedDate: new Date().toISOString().slice(0, 10),
+  summary: '[Dev sample] Three Finance Operations interviews surfaced four recurring manual processes. Month-end reconciliation and vendor invoice handling were mentioned by all three interviewees and represent the highest combined time impact. FX exposure reporting and supplier screening each appeared twice and are strong secondary candidates.',
+  useCases: [
+    {
+      title: 'Month-end reconciliation automation',
+      description: 'Analysts spend 2–3 days each month manually matching transactions across SAP, bank portals, and Excel. The process is well-structured and data sources are consistent, making it a strong automation candidate.',
+      evidence: 'Mentioned by 3 of 3 interviewees',
+      mentionCount: 3,
+      currentProcess: 'Export from SAP and three bank portals, paste into Excel, run VLOOKUPs, flag exceptions, email controller.',
+      frequency: 'Monthly — 800–1,200 transactions per cycle',
+      estimatedTimeImpact: '4–6 analyst-days per month',
+      peopleAndSystems: '2 finance analysts, 1 financial controller. SAP, three banking portals, Excel.',
+      dataReadiness: 'SAP exports are structured and consistent. Bank CSVs vary in format across portals.',
+      impactScore: 5,
+      impactRationale: 'Eliminates 4–6 analyst-days of manual work per month across two roles.',
+      feasibilityScore: 4,
+      feasibilityRationale: 'SAP and bank data are well-structured; main challenge is normalising varying CSV formats across three portals.',
+      lowEvidence: false,
+    },
+    {
+      title: 'Vendor invoice exception triage',
+      description: 'Around 50 invoices per week fail PO matching in SAP and require manual investigation via shared email inbox, often involving back-and-forth with procurement or the vendor.',
+      evidence: 'Mentioned by 3 of 3 interviewees',
+      mentionCount: 3,
+      currentProcess: 'Check shared inbox daily, compare against SAP PO data, contact procurement or vendor by email, update SAP manually, post corrected invoice.',
+      frequency: '40–60 exceptions/week, rising to 100+ at quarter-end',
+      estimatedTimeImpact: '15–45 minutes per exception; up to 45 analyst-hours per week at peak',
+      peopleAndSystems: '3 AP analysts, procurement team, external vendors. SAP, shared email inbox.',
+      dataReadiness: 'PO and invoice data in SAP is well-structured. Exception history and resolution rationale exist only in email threads.',
+      impactScore: 4,
+      impactRationale: 'High volume with significant peak-period burden; automating triage and routing could cut resolution time by 50–70%.',
+      feasibilityScore: 3,
+      feasibilityRationale: 'Structured SAP data is workable, but resolution history in email makes training a classifier harder without a logging system.',
+      lowEvidence: false,
+    },
+    {
+      title: 'Weekly FX exposure report',
+      description: 'A single treasury analyst manually compiles the FX report each week from six bank portals and Bloomberg, taking 3–4 hours.',
+      evidence: 'Mentioned by 2 of 3 interviewees',
+      mentionCount: 2,
+      currentProcess: 'Log into six bank portals, download balances, paste into Excel, manually enter Bloomberg FX rates, calculate net exposure, email to CFO.',
+      frequency: 'Weekly, plus ad hoc on volatile days',
+      estimatedTimeImpact: '3–4 hours/week plus ad hoc instances',
+      peopleAndSystems: '1 treasury analyst, CFO. Six bank portals, Bloomberg terminal, Excel.',
+      dataReadiness: 'Bank balances are accurate but spread across six portals with inconsistent formats. Bloomberg rates are reliable but no API access currently provisioned.',
+      impactScore: 3,
+      impactRationale: 'Saves 3–4 hours weekly and enables real-time CFO visibility; impact constrained by single-person scope.',
+      feasibilityScore: 3,
+      feasibilityRationale: 'Main blocker is Bloomberg API access, which is not yet provisioned and requires procurement approval.',
+      lowEvidence: false,
+    },
+    {
+      title: 'New supplier compliance screening',
+      description: 'Each new supplier requires manual lookup against two internal Excel blacklists and a government sanctions database before SAP onboarding.',
+      evidence: 'Mentioned by 1 of 3 interviewees',
+      mentionCount: 1,
+      currentProcess: 'Receive supplier details by email, search two Excel blacklists, look up sanctions website manually, record outcome in Word, email result to procurement.',
+      frequency: '10–15 new suppliers per month',
+      estimatedTimeImpact: '30–60 minutes per supplier; up to 15 hours/month',
+      peopleAndSystems: '1 AP analyst, procurement team. Two internal Excel spreadsheets, government sanctions website, Word, email.',
+      dataReadiness: 'Internal exclusion lists are in Excel and not always current. Government sanctions database supports only individual manual lookups — no batch API.',
+      impactScore: 3,
+      impactRationale: 'Moderate volume but compliance risk means errors are costly; automation reduces human error as much as time.',
+      feasibilityScore: 3,
+      feasibilityRationale: 'Government database lacks a batch API, requiring a workaround or web scraping; internal lists need consolidation first.',
+      lowEvidence: true,
+    },
+  ],
+  flags: [
+    'Vendor and supplier PII flows through shared email inboxes — no audit trail. Assess data handling compliance before automating.',
+    'Bloomberg data redistribution rights may restrict use in automated pipelines — confirm licensing before building the FX report automation.',
+  ],
+})
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   const password = req.headers['x-shared-password']
-  const validPasswords = [process.env.SHARED_PASSWORD, process.env.INTERVIEW_PASSWORD].filter(Boolean)
-  if (!password || !validPasswords.includes(password)) {
+  if (!password || password !== process.env.SHARED_PASSWORD) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
@@ -93,6 +169,9 @@ export default async function handler(req, res) {
     const transcripts = extractTranscriptsForTeam(bodyContent, team)
 
     if (transcripts.length === 0) {
+      if (process.env.APP_ENV !== 'production') {
+        return res.status(200).json(DEV_SAMPLE_RESPONSE(team))
+      }
       return res.status(404).json({ error: `No transcripts found for team: ${team}` })
     }
 
