@@ -110,7 +110,7 @@ export default function App() {
       name: derivedName,
       team,
     })
-    if (derivedName) setDiscoveries(getAllDiscoveries())
+    if (derivedName || (team && currentItem?.team !== team)) setDiscoveries(getAllDiscoveries())
   }, [messages, isLoading, docSections, activePhase, activeDiscoveryId])
 
   const handleAdvancePhase = useCallback(() => {
