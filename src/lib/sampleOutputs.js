@@ -1,3 +1,48 @@
+export const AI_DISCOVERY_SAMPLE = `Here is the summary from your AI discovery interview.
+
+<output-card>
+**Session metadata**
+Name: Sarah Chen
+Team: Finance Operations
+Date: 11/08/2026
+
+**Topics discussed**
+
+Topic: Month-end close reconciliation
+Description: Two analysts spend 2–3 days each month manually reconciling transactions across SAP, bank statements, and a legacy Excel tracker before the controller can sign off.
+Current process: Pull exports from SAP and three bank portals, paste into a master Excel workbook, run VLOOKUP formulas to match entries, flag unmatched rows in a separate exceptions tab, email the exceptions report to the controller for review.
+Frequency & volume: Monthly — 800–1,200 transactions per cycle.
+Time per instance: 2–3 days for two analysts working in parallel.
+People / systems involved: 2 finance analysts, 1 financial controller. SAP ERP, three online banking portals, Excel.
+Data situation: SAP exports are structured and consistent. Bank data arrives as CSV but formatting varies across banks. The Excel tracker is semi-structured with free-text annotation fields that require manual interpretation.
+
+Topic: Vendor invoice exception handling
+Description: Around 50 invoices per week fail to auto-match a purchase order in SAP and land in a shared inbox, where analysts resolve each one manually — often requiring email back-and-forth with procurement or the vendor.
+Current process: Check shared inbox daily, compare each exception against SAP purchase order data, contact procurement or the vendor by email to resolve discrepancies, update SAP manually once confirmed, post the corrected invoice.
+Frequency & volume: 40–60 exceptions per week, rising to 100+ at quarter-end.
+Time per instance: 15–45 minutes per exception depending on complexity.
+People / systems involved: 3 AP analysts, procurement team, external vendors. SAP, shared email inbox, vendor portals accessed ad hoc.
+Data situation: Purchase order and invoice data in SAP is well-structured. Exception reasons and resolution history exist only in email threads — nothing is captured in a system of record.
+
+Topic: Weekly FX exposure report
+Description: A single treasury analyst manually compiles the FX exposure report each week by pulling balances from six bank accounts and applying Bloomberg rates in Excel before emailing the result to the CFO.
+Current process: Log in to six bank portals individually, download balance reports, paste figures into a master Excel workbook, manually enter current exchange rates from Bloomberg, calculate net exposure by currency, format the summary table, email to CFO.
+Frequency & volume: Weekly cadence, plus ad hoc versions on days with significant rate movement.
+Time per instance: 3–4 hours per week.
+People / systems involved: 1 treasury analyst, CFO. Six bank portals, Bloomberg terminal, Excel.
+Data situation: Bank balances are accurate but spread across six portals with inconsistent export formats. Bloomberg rates are reliable but copy-pasted manually — no API access is currently provisioned.
+
+Topic: New supplier compliance screening
+Description: Every new supplier must be checked against internal exclusion lists and a government sanctions database before being added to SAP — done entirely through manual search and a Word document.
+Current process: Receive supplier details from procurement by email, search two internal Excel blacklists, look up the supplier name on the government sanctions website, record the outcome in a Word document, email approval or rejection to procurement.
+Frequency & volume: 10–15 new suppliers per month.
+Time per instance: 30–60 minutes per supplier.
+People / systems involved: 1 AP analyst, procurement team. Two internal Excel spreadsheets, government sanctions website, Word, email.
+Data situation: Internal exclusion lists are maintained in Excel and not always current. The government sanctions database is publicly accessible and well-structured but only supports individual manual lookups — no batch search capability.
+</output-card>
+
+Thanks — that covers everything. Your summary is ready above.`
+
 export const SAMPLE_OUTPUTS = {
   1: `Here's your Phase 1 output.
 

@@ -4,7 +4,10 @@ import ChatInput from '../components/ChatInput.jsx'
 import PasswordGate from '../components/PasswordGate.jsx'
 import { useConversation } from '../hooks/useConversation.js'
 import { AI_DISCOVERY_OPENER } from '../lib/prompts/aiDiscovery.js'
+import { AI_DISCOVERY_SAMPLE } from '../lib/sampleOutputs.js'
 import '../styles/main.css'
+
+const isDev = import.meta.env.DEV
 
 const AI_OPENER_MSG = { role: 'assistant', content: AI_DISCOVERY_OPENER, _displayOnly: true }
 
@@ -20,7 +23,7 @@ export default function InterviewApp() {
     setAuthenticated(false)
   }, [])
 
-  const { messages, isLoading, error, docSections, phaseOutputReceived, sendUserMessage } = useConversation(1, {
+  const { messages, isLoading, error, docSections, phaseOutputReceived, sendUserMessage, injectPhaseOutput } = useConversation(1, {
     onUnauthorized: handleUnauthorized,
     initialMessages: [AI_OPENER_MSG],
     initialDocSections: {},
@@ -97,6 +100,7 @@ export default function InterviewApp() {
           phase={1}
           mode="ai-discovery"
           showAdvanceButton={false}
+          onInjectSampleOutput={isDev && !phaseOutputReceived ? () => injectPhaseOutput(AI_DISCOVERY_SAMPLE) : undefined}
         />
       </main>
 

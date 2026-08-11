@@ -15,7 +15,7 @@ import {
   saveDiscovery,
   deriveDiscoveryName,
 } from './lib/persistence.js'
-import { SAMPLE_OUTPUTS } from './lib/sampleOutputs.js'
+import { SAMPLE_OUTPUTS, AI_DISCOVERY_SAMPLE } from './lib/sampleOutputs.js'
 import { AI_DISCOVERY_OPENER } from './lib/prompts/aiDiscovery.js'
 
 const AI_OPENER_MSG = { role: 'assistant', content: AI_DISCOVERY_OPENER, _displayOnly: true }
@@ -122,6 +122,10 @@ export default function App() {
   }, [activePhase])
 
   const handleInjectSampleOutput = useCallback(() => {
+    if (activeMode === 'ai-discovery') {
+      injectPhaseOutput(AI_DISCOVERY_SAMPLE)
+      return
+    }
     const sample = SAMPLE_OUTPUTS[activePhase]
     injectPhaseOutput(sample)
     if (activePhase > 1) {
@@ -129,7 +133,7 @@ export default function App() {
       phaseOutputsRef.current = updated
       setPhaseOutputs(updated)
     }
-  }, [activePhase, injectPhaseOutput])
+  }, [activePhase, activeMode, injectPhaseOutput])
 
   useEffect(() => {
     if (pendingCarryInRef.current === null) return
